@@ -1,0 +1,72 @@
+{
+  "home": {
+    "greeting": "Halo, Selamat Datang! 👋",
+    "greetingDesc": "Temukan drama pendek favoritmu hari ini.",
+    "topTrending": "Top Trending",
+    "more": "Lebih Banyak",
+    "romance": "Bikin Baper (Romansa)",
+    "action": "Aksi & Bela Diri",
+    "views": "Ditonton",
+    "trendingBadge": "#1 TRENDING",
+    "searchPlaceholder": "Cari judul drama...",
+    "nav": {
+      "home": "Beranda",
+      "trending": "Trending",
+      "romance": "Bikin Baper",
+      "action": "Aksi"
+    },
+    "footer": {
+      "desc": "Platform streaming eksklusif untuk drama pendek vertikal premium. Nikmati ribuan episode kapan saja, di mana saja dengan kualitas HD.",
+      "explore": "Jelajahi",
+      "support": "Bantuan & Legal",
+      "stayConnected": "Tetap Terhubung",
+      "subscribe": "Berlangganan info rilis terbaru:",
+      "emailPlaceholder": "Email Anda...",
+      "copyright": "© 2026 DramaShort Inc. Hak Cipta Dilindungi.",
+      "designedWith": "Didesain dengan",
+      "forLovers": "untuk pencinta drama."
+    },
+    "links": {
+      "home": "Beranda",
+      "about": "Tentang Kami",
+      "topTrending": "Top Trending",
+      "romance": "Drama Romantis",
+      "action": "Aksi & Bela Diri",
+      "faq": "Pusat Bantuan (FAQ)",
+      "vip": "Cara Berlangganan VIP",
+      "terms": "Syarat & Ketentuan",
+      "privacy": "Kebijakan Privasi",
+      "contact": "Hubungi Kami"
+    }
+  },
+  "about": {
+    "title": "Tentang",
+    "desc": "Platform streaming drama pendek terbaik. Kami menghadirkan hiburan sinematik berkualitas dalam format vertikal yang pas di genggaman Anda.",
+    "heading": "Hiburan Tanpa Batas, Kapan Saja, Di Mana Saja.",
+    "p1": "Vidplus+ video stream short drama menyediakan tayangan drama pendek eksklusif dengan berbagai pilihan genre menarik. Mulai dari romansa yang bikin baper, aksi mendebarkan, hingga misteri yang penuh teka-teki.",
+    "p2": "Nikmati fleksibilitas menonton sesuai gaya Anda. Tersedia akses full gratis untuk menjelajahi cerita seru, atau pilih opsi premium berbayar untuk pengalaman menonton tanpa jeda iklan dan akses eksklusif ke episode-episode terbaru.",
+    "features": {
+      "genre": "Berbagai Genre",
+      "genreDesc": "Pilihan cerita tak terbatas",
+      "short": "Short Drama",
+      "shortDesc": "Durasi singkat & padat",
+      "vip": "Gratis & VIP",
+      "vipDesc": "Pilih akses sesukamu",
+      "update": "Update Rutin",
+      "updateDesc": "Episode baru setiap hari"
+    }
+  },
+  "contact": {
+    "title": "Hubungi Kami",
+    "desc": "Punya pertanyaan atau butuh bantuan? Tim Vidplus+ siap membantu Anda.",
+    "email": "Email",
+    "phone": "Telepon",
+    "telegram": "Telegram",
+    "whatsapp": "WhatsApp",
+    "address": "Alamat Kantor",
+    "addressText": "Jln. Sultan Agung No. 90a\nSemarang, Jawa Tengah\nIndonesia, 20252"
+  },
+  "privacy": {
+    "title": "Privacy Vidplus+"
+  }
+}

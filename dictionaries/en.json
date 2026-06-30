@@ -1,0 +1,72 @@
+{
+  "home": {
+    "greeting": "Hello, Welcome! 👋",
+    "greetingDesc": "Find your favorite short dramas today.",
+    "topTrending": "Top Trending",
+    "more": "More",
+    "romance": "Heart-fluttering (Romance)",
+    "action": "Action & Martial Arts",
+    "views": "Views",
+    "trendingBadge": "#1 TRENDING",
+    "searchPlaceholder": "Search drama title...",
+    "nav": {
+      "home": "Home",
+      "trending": "Trending",
+      "romance": "Romance",
+      "action": "Action"
+    },
+    "footer": {
+      "desc": "Exclusive streaming platform for premium vertical short dramas. Enjoy thousands of episodes anytime, anywhere in HD quality.",
+      "explore": "Explore",
+      "support": "Support & Legal",
+      "stayConnected": "Stay Connected",
+      "subscribe": "Subscribe for latest release info:",
+      "emailPlaceholder": "Your Email...",
+      "copyright": "© 2026 DramaShort Inc. All Rights Reserved.",
+      "designedWith": "Designed with",
+      "forLovers": "for drama lovers."
+    },
+    "links": {
+      "home": "Home",
+      "about": "About Us",
+      "topTrending": "Top Trending",
+      "romance": "Romance Drama",
+      "action": "Action & Martial Arts",
+      "faq": "Help Center (FAQ)",
+      "vip": "How to Subscribe VIP",
+      "terms": "Terms & Conditions",
+      "privacy": "Privacy Policy",
+      "contact": "Contact Us"
+    }
+  },
+  "about": {
+    "title": "About Us",
+    "desc": "The best short drama streaming platform. We bring high-quality cinematic entertainment in a vertical format that fits perfectly in your hand.",
+    "heading": "Unlimited Entertainment, Anytime, Anywhere.",
+    "p1": "Vidplus+ video stream short drama provides exclusive short drama shows with various exciting genres. From heart-fluttering romance, thrilling action, to puzzling mysteries.",
+    "p2": "Enjoy the flexibility of watching according to your style. Get full free access to explore exciting stories, or choose a premium paid option for an ad-free viewing experience and exclusive access to the latest episodes.",
+    "features": {
+      "genre": "Various Genres",
+      "genreDesc": "Unlimited story choices",
+      "short": "Short Drama",
+      "shortDesc": "Short & concise duration",
+      "vip": "Free & VIP",
+      "vipDesc": "Choose your access",
+      "update": "Routine Updates",
+      "updateDesc": "New episodes every day"
+    }
+  },
+  "contact": {
+    "title": "Contact Us",
+    "desc": "Have questions or need help? The Vidplus+ team is ready to assist you.",
+    "email": "Email",
+    "phone": "Phone",
+    "telegram": "Telegram",
+    "whatsapp": "WhatsApp",
+    "address": "Office Address",
+    "addressText": "Jln. Sultan Agung No. 90a\nSemarang, Central Java\nIndonesia, 20252"
+  },
+  "privacy": {
+    "title": "Privacy Vidplus+"
+  }
+}
