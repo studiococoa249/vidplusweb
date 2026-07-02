@@ -5,7 +5,7 @@ import { usePathname, useParams } from "next/navigation";
 import { 
   LayoutDashboard, Users, CreditCard, History, 
   Image as ImageIcon, Settings, LogOut, Menu, X, ExternalLink,
-  Tags, PlaySquare
+  Tags, PlaySquare, UserRound, Server
 } from "lucide-react";
 import { useState } from "react";
 
@@ -19,10 +19,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Dashboard", href: `/${lang}/admin`, icon: LayoutDashboard, exact: true },
     { name: "Genres", href: `/${lang}/admin/short/genre`, icon: Tags, exact: false },
     { name: "Short Videos", href: `/${lang}/admin/short/short-video`, icon: PlaySquare, exact: false },
+    { name: "Actor", href: `/${lang}/admin/actor`, icon: UserRound, exact: false },
     { name: "Users", href: `/${lang}/admin/user`, icon: Users, exact: false },
     { name: "Membership Plans", href: `/${lang}/admin/plan`, icon: CreditCard, exact: false },
     { name: "Transaction History", href: `/${lang}/admin/history-trx`, icon: History, exact: false },
     { name: "ImageKit API", href: `/${lang}/admin/imagekit-api`, icon: ImageIcon, exact: false },
+    { name: "Rapid API", href: `/${lang}/admin/rapid-api`, icon: Server, exact: false },
     { name: "Payment Gateway", href: `/${lang}/admin/payment-gateway`, icon: Settings, exact: false },
   ];
 

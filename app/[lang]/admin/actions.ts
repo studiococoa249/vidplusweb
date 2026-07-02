@@ -233,3 +233,220 @@ export async function deleteShortDrama(prevState: any, formData: FormData) {
   return { success: "Berhasil dihapus." };
 }
 
+export async function createActor(prevState: any, formData: FormData) {
+  const name = formData.get("name") as string;
+  const slug = formData.get("slug") as string;
+  const actor_banner_imagekit_url = (formData.get("actor_banner_imagekit_url") as string) || null;
+  const lang = formData.get("lang") as string || "id";
+
+  if (!name || !slug) {
+    return { error: "Nama dan slug wajib diisi." };
+  }
+
+  const { error } = await supabase.from("actor").insert([{ name, slug, actor_banner_imagekit_url }]);
+
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "Slug sudah digunakan." };
+    }
+    return { error: "Gagal menyimpan actor." };
+  }
+
+  revalidatePath(`/${lang}/admin/actor`);
+  redirect(`/${lang}/admin/actor`);
+}
+
+export async function updateActor(prevState: any, formData: FormData) {
+  const id = formData.get("id") as string;
+  const name = formData.get("name") as string;
+  const slug = formData.get("slug") as string;
+  const actor_banner_imagekit_url = (formData.get("actor_banner_imagekit_url") as string) || null;
+  const lang = formData.get("lang") as string || "id";
+
+  if (!id || !name || !slug) {
+    return { error: "ID, nama, dan slug wajib diisi." };
+  }
+
+  const { error } = await supabase
+    .from("actor")
+    .update({ name, slug, actor_banner_imagekit_url })
+    .eq("id", id);
+
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "Slug sudah digunakan." };
+    }
+    return { error: "Gagal memperbarui actor." };
+  }
+
+  revalidatePath(`/${lang}/admin/actor`);
+  redirect(`/${lang}/admin/actor`);
+}
+
+export async function deleteActor(prevState: any, formData: FormData) {
+  const id = formData.get("id") as string;
+  const lang = formData.get("lang") as string || "id";
+
+  if (!id) {
+    return { error: "ID tidak valid." };
+  }
+
+  await supabase.from("actor").delete().eq("id", id);
+  revalidatePath(`/${lang}/admin/actor`);
+  return { success: "Berhasil dihapus." };
+}
+
+export async function createRapidApi(prevState: any, formData: FormData) {
+  const name = formData.get("name") as string;
+  const url = formData.get("url") as string;
+  const rapidapi_host = formData.get("rapidapi_host") as string;
+  const rapidapi_key = formData.get("rapidapi_key") as string;
+  const lang = formData.get("lang") as string || "id";
+
+  if (!name || !url || !rapidapi_host || !rapidapi_key) {
+    return { error: "Semua field harus diisi." };
+  }
+
+  const { error } = await supabase.from("rapid_api").insert([
+    { name, url, rapidapi_host, rapidapi_key },
+  ]);
+
+  if (error) {
+    return { error: "Gagal menyimpan data." };
+  }
+
+  revalidatePath(`/${lang}/admin/rapid-api`);
+  redirect(`/${lang}/admin/rapid-api`);
+}
+
+export async function updateRapidApi(prevState: any, formData: FormData) {
+  const id = formData.get("id") as string;
+  const name = formData.get("name") as string;
+  const url = formData.get("url") as string;
+  const rapidapi_host = formData.get("rapidapi_host") as string;
+  const rapidapi_key = formData.get("rapidapi_key") as string;
+  const lang = formData.get("lang") as string || "id";
+
+  if (!id || !name || !url || !rapidapi_host || !rapidapi_key) {
+    return { error: "Semua field harus diisi." };
+  }
+
+  const { error } = await supabase.from("rapid_api").update(
+    { name, url, rapidapi_host, rapidapi_key }
+  ).eq("id", id);
+
+  if (error) {
+    return { error: "Gagal memperbarui data." };
+  }
+
+  revalidatePath(`/${lang}/admin/rapid-api`);
+  redirect(`/${lang}/admin/rapid-api`);
+}
+
+export async function deleteRapidApi(prevState: any, formData: FormData) {
+  const id = formData.get("id") as string;
+  const lang = formData.get("lang") as string || "id";
+
+  if (!id) {
+    return { error: "ID tidak valid." };
+  }
+
+  await supabase.from("rapid_api").delete().eq("id", id);
+  revalidatePath(`/${lang}/admin/rapid-api`);
+  return { success: "Berhasil dihapus." };
+}
+
+function slugify(text: string) {
+  return text.toString().toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]+/g, '')
+    .replace(/\-\-+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+}
+
+export async function importDramas(prevState: any, formData: FormData) {
+  const provider = formData.get("provider") as string;
+  const lang = formData.get("lang") as string || "id";
+
+  if (!provider) {
+    return { error: "Provider tidak valid." };
+  }
+
+  // Fetch Rapid API config
+  const { data: config, error: configError } = await supabase
+    .from("rapid_api")
+    .select("*")
+    .limit(1)
+    .single();
+
+  if (configError || !config) {
+    return { error: "Konfigurasi Rapid API tidak ditemukan." };
+  }
+
+  try {
+    const apiUrl = `${config.url}/dramas?provider=${provider}`;
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'x-rapidapi-host': config.rapidapi_host,
+        'x-rapidapi-key': config.rapidapi_key
+      }
+    });
+
+    if (!response.ok) {
+      return { error: `Gagal memanggil API: ${response.statusText}` };
+    }
+
+    const json = await response.json();
+    if (!json.status || !json.data || !json.data.dramas) {
+      return { error: "Format respons API tidak sesuai." };
+    }
+
+    const dramas = json.data.dramas;
+    let successCount = 0;
+
+    for (const d of dramas) {
+      const slug = slugify(d.title) + "-" + d.dramaId; // ensure uniqueness
+      const dramaData = {
+        drama_id: String(d.dramaId),
+        name: d.title,
+        slug: slug,
+        desc: d.desc,
+        total_episode: d.total_episodes,
+        banner_url: d.cover
+      };
+
+      // Upsert by drama_id 
+      const { data: existing } = await supabase
+        .from("short_drama")
+        .select("id")
+        .eq("drama_id", dramaData.drama_id)
+        .single();
+
+      if (existing) {
+        // Update existing
+        const { error: updateError } = await supabase.from("short_drama").update(dramaData).eq("id", existing.id);
+        if (updateError) {
+          console.error("Update error for", dramaData.name, ":", updateError);
+        } else {
+          successCount++;
+        }
+      } else {
+        // Insert new
+        const { error: insertError } = await supabase.from("short_drama").insert([dramaData]);
+        if (insertError) {
+          console.error("Insert error for", dramaData.name, ":", insertError);
+        } else {
+          successCount++;
+        }
+      }
+    }
+
+    revalidatePath(`/${lang}/admin/short/short-video`);
+    return { success: `Berhasil import ${successCount} drama dari ${provider}.` };
+  } catch (error: any) {
+    console.error("Error importing dramas:", error);
+    return { error: "Terjadi kesalahan saat import data." };
+  }
+}

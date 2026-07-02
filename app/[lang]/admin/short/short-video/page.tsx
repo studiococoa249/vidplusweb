@@ -1,15 +1,37 @@
 import { supabase } from "@/utils/supabase";
 import Link from "next/link";
-import { Plus, Edit, Search, PlaySquare, Eye, ListVideo } from "lucide-react";
+import { Plus, Edit, Search, PlaySquare, Eye, ListVideo, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import DeleteShortVideoButton from "./DeleteShortVideoButton";
+import GetEpisodeButton from "./GetEpisodeButton";
 
-export default async function ShortVideoPage({ params }: { params: Promise<{ lang: string }> }) {
-  const { lang } = await params;
+export default async function ShortVideoPage(
+  props: { 
+    params: Promise<{ lang: string }>;
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+  }
+) {
+  const params = await props.params;
+  const searchParams = await props.searchParams;
+  const lang = params.lang || "id";
   
+  const page = typeof searchParams.page === 'string' ? parseInt(searchParams.page, 10) : 1;
+  const pageSize = 10;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  // Fetch count
+  const { count } = await supabase
+    .from("short_drama")
+    .select("*", { count: "exact", head: true });
+
+  const totalPages = count ? Math.ceil(count / pageSize) : 1;
+
+  // Fetch paginated data
   const { data: videos } = await supabase
     .from("short_drama")
     .select("*")
-    .order("create_at", { ascending: false });
+    .order("create_at", { ascending: false })
+    .range(from, to);
 
   return (
     <div className="w-full space-y-6">
@@ -21,16 +43,25 @@ export default async function ShortVideoPage({ params }: { params: Promise<{ lan
           </h1>
           <p className="text-gray-400 text-sm mt-1">Kelola serial drama pendek Anda</p>
         </div>
-        <Link 
-          href={`/${lang}/admin/short/short-video/create`}
-          className="bg-[#ffbd59] hover:bg-[#e5a94f] text-black px-4 py-2 rounded-xl font-medium transition-colors flex items-center gap-2 shadow-lg shadow-[#ffbd59]/20"
-        >
-          <Plus size={18} />
-          <span>Tambah Judul</span>
-        </Link>
+        <div className="flex gap-3">
+          <Link 
+            href={`/${lang}/admin/short/short-video/import`}
+            className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-xl font-medium transition-colors flex items-center gap-2 border border-gray-700 shadow-lg shadow-black/20"
+          >
+            <Download size={18} />
+            <span>Import API</span>
+          </Link>
+          <Link 
+            href={`/${lang}/admin/short/short-video/create`}
+            className="bg-[#ffbd59] hover:bg-[#e5a94f] text-black px-4 py-2 rounded-xl font-medium transition-colors flex items-center gap-2 shadow-lg shadow-[#ffbd59]/20"
+          >
+            <Plus size={18} />
+            <span>Tambah Judul</span>
+          </Link>
+        </div>
       </div>
 
-      <div className="bg-[#121622] rounded-xl border border-gray-800 overflow-hidden shadow-xl">
+      <div className="bg-[#121622] rounded-xl border border-gray-800 overflow-hidden shadow-xl flex flex-col">
         <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-[#0a0c13]/50">
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
@@ -42,7 +73,7 @@ export default async function ShortVideoPage({ params }: { params: Promise<{ lan
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto flex-1">
           <table className="w-full text-left text-sm text-gray-300">
             <thead className="bg-[#0a0c13] text-gray-400 border-b border-gray-800 uppercase tracking-wider text-xs">
               <tr>
@@ -96,6 +127,7 @@ export default async function ShortVideoPage({ params }: { params: Promise<{ lan
                         >
                           <Edit size={16} />
                         </Link>
+                        <GetEpisodeButton id={vid.id} dramaId={vid.drama_id} lang={lang} />
                         <DeleteShortVideoButton id={vid.id} lang={lang} />
                       </div>
                     </td>
@@ -111,6 +143,69 @@ export default async function ShortVideoPage({ params }: { params: Promise<{ lan
             </tbody>
           </table>
         </div>
+
+        {/* Pagination UI */}
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-gray-800 flex items-center justify-between bg-[#0a0c13]/50">
+            <div className="text-sm text-gray-400">
+              Menampilkan {count === 0 ? 0 : from + 1} - {Math.min(to + 1, count || 0)} dari {count} data
+            </div>
+            <div className="flex gap-2">
+              {page > 1 ? (
+                <Link 
+                  href={`/${lang}/admin/short/short-video?page=${page - 1}`}
+                  className="p-2 rounded-lg bg-[#121622] border border-gray-700 text-gray-300 hover:text-white hover:border-gray-500 transition-colors"
+                >
+                  <ChevronLeft size={18} />
+                </Link>
+              ) : (
+                <button disabled className="p-2 rounded-lg bg-[#121622] border border-gray-800 text-gray-600 cursor-not-allowed">
+                  <ChevronLeft size={18} />
+                </button>
+              )}
+
+              {/* Show page numbers */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }).map((_, i) => {
+                  const pageNum = i + 1;
+                  // Simple logic to show a few pages around the current page
+                  if (pageNum === 1 || pageNum === totalPages || (pageNum >= page - 1 && pageNum <= page + 1)) {
+                    return (
+                      <Link
+                        key={pageNum}
+                        href={`/${lang}/admin/short/short-video?page=${pageNum}`}
+                        className={`w-9 h-9 flex items-center justify-center rounded-lg border text-sm transition-colors ${
+                          page === pageNum
+                            ? "bg-[#ffbd59] border-[#ffbd59] text-black font-medium"
+                            : "bg-[#121622] border-gray-700 text-gray-300 hover:border-gray-500"
+                        }`}
+                      >
+                        {pageNum}
+                      </Link>
+                    );
+                  } else if (pageNum === page - 2 || pageNum === page + 2) {
+                    return <span key={pageNum} className="text-gray-500 px-1">...</span>;
+                  }
+                  return null;
+                })}
+              </div>
+
+              {page < totalPages ? (
+                <Link 
+                  href={`/${lang}/admin/short/short-video?page=${page + 1}`}
+                  className="p-2 rounded-lg bg-[#121622] border border-gray-700 text-gray-300 hover:text-white hover:border-gray-500 transition-colors"
+                >
+                  <ChevronRight size={18} />
+                </Link>
+              ) : (
+                <button disabled className="p-2 rounded-lg bg-[#121622] border border-gray-800 text-gray-600 cursor-not-allowed">
+                  <ChevronRight size={18} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

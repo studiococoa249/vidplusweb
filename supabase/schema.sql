@@ -10,6 +10,7 @@ CREATE TABLE users (
     full_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
+    user_token TEXT,
     level user_level DEFAULT 'Member',
     status user_status DEFAULT 'Active',
     membership user_membership DEFAULT 'Free',
@@ -119,6 +120,7 @@ CREATE TABLE genre (
 -- Table: short_drama
 CREATE TABLE short_drama (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    drama_id VARCHAR(255) NULL,
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
     id_genre JSONB,
@@ -135,6 +137,8 @@ CREATE TABLE play_short_drama (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     id_short_drama UUID REFERENCES short_drama(id) ON DELETE CASCADE,
     url TEXT NOT NULL,
+    episode INTEGER,
+    duration INTEGER,
     create_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     update_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -184,5 +188,21 @@ CREATE TRIGGER update_imagekit_api_update_at
 
 CREATE TRIGGER update_payment_gateway_update_at
     BEFORE UPDATE ON payment_gateway
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Table: rapid_api
+CREATE TABLE rapid_api (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    url TEXT,
+    rapidapi_host VARCHAR(255),
+    rapidapi_key VARCHAR(255),
+    create_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    update_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TRIGGER update_rapid_api_update_at
+    BEFORE UPDATE ON rapid_api
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
