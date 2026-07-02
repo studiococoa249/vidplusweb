@@ -8,6 +8,7 @@ import {
 import LanguageDropdown from '../components/LanguageDropdown';
 import { supabase } from '@/utils/supabase';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 
 const Instagram = ({ size = 24, className = "" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
@@ -24,6 +25,15 @@ const Youtube = ({ size = 24, className = "" }) => (
 export default async function DramaShortApp({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   const dict = await getDictionary(lang as 'en' | 'id');
+
+  const cookieStore = await cookies();
+  const sessionStr = cookieStore.get("auth_session")?.value;
+  let userSession = null;
+  if (sessionStr) {
+    try {
+      userSession = JSON.parse(sessionStr);
+    } catch(e) {}
+  }
 
   // Fetch data from short_drama
   const { data: dramas } = await supabase
@@ -75,12 +85,41 @@ export default async function DramaShortApp({ params }: { params: Promise<{ lang
             <Search size={22} />
           </button>
 
-          <LanguageDropdown currentLang={lang} />
-
-          {/* User Profile Desktop */}
-          <div className="hidden md:flex items-center gap-3 cursor-pointer group">
-            <img src="https://placehold.co/100x100/ffbd59/000?text=U" alt="User" className="w-9 h-9 rounded-full border-2 border-transparent group-hover:border-[#ffbd59] transition object-cover" />
-          </div>
+          {/* Auth/User Profile Desktop */}
+          {userSession ? (
+            <div className="hidden md:flex items-center gap-3 cursor-pointer group relative">
+              <div className="w-9 h-9 rounded-full bg-[#ffbd59] flex items-center justify-center text-black font-bold border-2 border-transparent group-hover:border-white transition">
+                {userSession.fullName ? userSession.fullName.charAt(0).toUpperCase() : 'U'}
+              </div>
+              <div className="absolute top-full right-0 mt-2 w-48 bg-[#121622] rounded-xl shadow-lg border border-gray-800 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col p-2">
+                <div className="px-3 py-2 border-b border-gray-800 mb-2">
+                  <p className="text-sm font-semibold text-white truncate">{userSession.fullName}</p>
+                  <p className="text-xs text-gray-400 truncate">{userSession.email}</p>
+                </div>
+                <Link href={`/${lang}/profile`} className="px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition">Profile</Link>
+                <Link href={`/${lang}/plan`} className="px-3 py-2 text-sm text-[#ffbd59] font-medium hover:text-white hover:bg-gray-800 rounded-lg transition">Upgrade Plan</Link>
+                {userSession.level === 'Admin' && (
+                  <Link href={`/${lang}/admin`} className="px-3 py-2 text-sm text-gray-300 hover:text-[#ffbd59] hover:bg-gray-800 rounded-lg transition">Admin Panel</Link>
+                )}
+                <form action={async () => {
+                  "use server";
+                  const { logoutUser } = await import("./auth/actions");
+                  await logoutUser(lang);
+                }}>
+                  <button type="submit" className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-400/10 rounded-lg transition mt-1">Logout</button>
+                </form>
+              </div>
+            </div>
+          ) : (
+            <div className="hidden md:flex items-center gap-3">
+              <Link href={`/${lang}/auth/login`} className="text-gray-300 hover:text-white font-medium text-sm transition px-2 py-1">
+                Login
+              </Link>
+              <Link href={`/${lang}/auth/register`} className="bg-[#ffbd59] hover:bg-[#e5a94f] text-black font-bold px-5 py-2 rounded-full text-sm transition shadow-[0_0_15px_rgba(255,189,89,0.2)]">
+                Register
+              </Link>
+            </div>
+          )}
         </div>
         </div>
       </header>
