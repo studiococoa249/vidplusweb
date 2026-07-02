@@ -37,9 +37,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ options, onReady }) =>
             hls.loadSource(src);
             hls.attachMedia(videoNative);
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
-              player.play().catch(() => {
-                // handle autoplay block
-              });
+              const playPromise = player.play();
+              if (playPromise !== undefined) {
+                playPromise.catch(() => {
+                  // handle autoplay block
+                });
+              }
             });
         }
       }
