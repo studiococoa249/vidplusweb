@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { updateImageKit } from "../../actions";
+import { updateImageKit } from "../../../actions";
 import Link from "next/link";
 import { ArrowLeft, Save } from "lucide-react";
 import { useParams } from "next/navigation";

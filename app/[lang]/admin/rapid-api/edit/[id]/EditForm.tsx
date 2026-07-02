@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { updateRapidApi } from "../../actions";
+import { updateRapidApi } from "../../../actions";
 import Link from "next/link";
 import { ArrowLeft, Save } from "lucide-react";
 import { useParams } from "next/navigation";
