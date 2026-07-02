@@ -1,6 +1,7 @@
 import { supabase } from "@/utils/supabase";
 import Link from "next/link";
-import { Edit, Trash2, Search, Shield, User as UserIcon } from "lucide-react";
+import { Edit, Search, Shield, User as UserIcon } from "lucide-react";
+import DeleteUserButton from "./DeleteUserButton";
 
 export default async function UserPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
@@ -80,9 +81,7 @@ export default async function UserPage({ params }: { params: Promise<{ lang: str
                         >
                           <Edit size={16} />
                         </Link>
-                        <button className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors" title="Hapus">
-                          <Trash2 size={16} />
-                        </button>
+                        <DeleteUserButton userId={user.id} userName={user.full_name} />
                       </div>
                     </td>
                   </tr>

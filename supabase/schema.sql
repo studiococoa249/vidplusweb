@@ -27,8 +27,6 @@ CREATE TABLE plan_membership (
     price_idr NUMERIC(15, 2) NOT NULL,
     price_usd NUMERIC(10, 2) NOT NULL,
     duration INTEGER NOT NULL, -- in days
-    description TEXT,
-    features JSONB DEFAULT '[]'::jsonb,
     create_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     update_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

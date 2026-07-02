@@ -15,28 +15,10 @@ export default function CreatePlanPage() {
     name: '',
     price_idr: '',
     price_usd: '',
-    duration: '',
-    description: '',
-    features: ['']
+    duration: ''
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleFeatureChange = (index: number, value: string) => {
-    const newFeatures = [...formData.features];
-    newFeatures[index] = value;
-    setFormData({ ...formData, features: newFeatures });
-  };
-
-  const addFeature = () => {
-    setFormData({ ...formData, features: [...formData.features, ''] });
-  };
-
-  const removeFeature = (index: number) => {
-    if (formData.features.length > 1) {
-      const newFeatures = formData.features.filter((_, i) => i !== index);
-      setFormData({ ...formData, features: newFeatures });
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,9 +29,7 @@ export default function CreatePlanPage() {
         name: formData.name,
         price_idr: Number(formData.price_idr),
         price_usd: Number(formData.price_usd),
-        duration: Number(formData.duration),
-        description: formData.description,
-        features: formData.features.filter(f => f.trim() !== '')
+        duration: Number(formData.duration)
       });
 
       if (error) {
@@ -130,51 +110,7 @@ export default function CreatePlanPage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Deskripsi</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
-                className="w-full bg-[#07090e] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#ffbd59] transition-colors"
-                placeholder="Deskripsi paket..."
-              />
-            </div>
 
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="block text-sm font-medium text-gray-300">Fitur Paket</label>
-                <button
-                  type="button"
-                  onClick={addFeature}
-                  className="text-xs text-[#ffbd59] hover:text-[#e5a94f] font-medium"
-                >
-                  + Tambah Fitur
-                </button>
-              </div>
-              <div className="space-y-2">
-                {formData.features.map((feature, index) => (
-                  <div key={index} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={feature}
-                      onChange={(e) => handleFeatureChange(index, e.target.value)}
-                      className="flex-1 bg-[#07090e] border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#ffbd59] transition-colors"
-                      placeholder={`Fitur ${index + 1}`}
-                    />
-                    {formData.features.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeFeature(index)}
-                        className="px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition-colors"
-                      >
-                        Hapus
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
 
