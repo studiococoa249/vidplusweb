@@ -18,7 +18,7 @@ function toSlug(text: string) {
 }
 
 export default function CreateActorPage() {
-  const [state, formAction, isPending] = useActionState(createActor, null);
+  const [state, formAction, isPending] = useActionState<any, FormData>(createActor, null);
   const params = useParams();
   const lang = (params.lang as string) || "id";
   const formRef = useRef<HTMLFormElement>(null);
