@@ -28,6 +28,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Payment Gateway", href: `/${lang}/admin/payment-gateway`, icon: Settings, exact: false },
   ];
 
+  const isLoginPage = pathname?.endsWith("/login") || pathname?.endsWith("/login/");
+
+  if (isLoginPage) {
+    return (
+      <div className="min-h-screen bg-[#07090e] text-gray-200 font-sans selection:bg-[#ffbd59] selection:text-black">
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#07090e] text-gray-200 font-sans selection:bg-[#ffbd59] selection:text-black flex">
       
@@ -78,7 +88,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </nav>
 
           <div className="p-4 border-t border-gray-800">
-            <button className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-colors">
+            <button 
+              onClick={async () => {
+                const { logoutAction } = await import("./login/actions");
+                await logoutAction();
+                window.location.href = `/${lang}/admin/login`;
+              }}
+              className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+            >
               <LogOut size={18} />
               <span>Logout</span>
             </button>

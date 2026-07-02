@@ -15,7 +15,9 @@ function getLocale(request: NextRequest): string {
   return defaultLocale
 }
 
-export function proxy(request: NextRequest) {
+import { verifySession } from "./lib/auth";
+
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Ignore static files, images, and api routes
@@ -25,6 +27,30 @@ export function proxy(request: NextRequest) {
     pathname.startsWith('/_next')
   ) {
     return NextResponse.next()
+  }
+
+  // Protect all /admin routes except /admin/login
+  if (pathname.includes("/admin") && !pathname.endsWith("/login") && !pathname.endsWith("/login/")) {
+    const sessionCookie = request.cookies.get("admin_session")?.value;
+    const session = await verifySession(sessionCookie);
+
+    if (!session || session.role !== "Admin") {
+      const langSegment = pathname.split("/")[1] || defaultLocale;
+      const loginUrl = new URL(`/${langSegment}/admin/login`, request.url);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // If logged in and trying to access login page, redirect to dashboard
+  if (pathname.includes("/admin") && (pathname.endsWith("/login") || pathname.endsWith("/login/"))) {
+    const sessionCookie = request.cookies.get("admin_session")?.value;
+    const session = await verifySession(sessionCookie);
+
+    if (session && session.role === "Admin") {
+      const langSegment = pathname.split("/")[1] || defaultLocale;
+      const dashboardUrl = new URL(`/${langSegment}/admin`, request.url);
+      return NextResponse.redirect(dashboardUrl);
+    }
   }
 
   // Check if there is any supported locale in the pathname
