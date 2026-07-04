@@ -296,6 +296,44 @@ export async function deleteActor(prevState: any, formData: FormData) {
   return { success: "Berhasil dihapus." };
 }
 
+export async function createActorVideo(prevState: any, formData: FormData) {
+  const id_actor = formData.get("id_actor") as string;
+  const url = (formData.get("url") as string)?.trim();
+  const lang = (formData.get("lang") as string) || "id";
+
+  if (!id_actor || !url) {
+    return { error: "URL video wajib diisi." };
+  }
+
+  const { error } = await supabase.from("video_actor").insert([
+    {
+      id_actor,
+      url_video: { url },
+    },
+  ]);
+
+  if (error) {
+    return { error: "Gagal menyimpan video." };
+  }
+
+  revalidatePath(`/${lang}/admin/actor/actor-video/${id_actor}`);
+  redirect(`/${lang}/admin/actor/actor-video/${id_actor}`);
+}
+
+export async function deleteActorVideo(prevState: any, formData: FormData) {
+  const id = formData.get("id") as string;
+  const id_actor = formData.get("id_actor") as string;
+  const lang = (formData.get("lang") as string) || "id";
+
+  if (!id || !id_actor) {
+    return { error: "ID tidak valid." };
+  }
+
+  await supabase.from("video_actor").delete().eq("id", id);
+  revalidatePath(`/${lang}/admin/actor/actor-video/${id_actor}`);
+  return { success: "Berhasil dihapus." };
+}
+
 export async function createRapidApi(prevState: any, formData: FormData) {
   const name = formData.get("name") as string;
   const url = formData.get("url") as string;

@@ -1,6 +1,6 @@
 import { supabase } from "@/utils/supabase";
 import Link from "next/link";
-import { Edit, Trash2, Plus, User as ActorIcon } from "lucide-react";
+import { Edit, Trash2, Plus, User as ActorIcon, Video } from "lucide-react";
 import DeleteActorButton from "./DeleteActorButton";
 
 export default async function ActorPage({ params }: { params: Promise<{ lang: string }> }) {
@@ -87,6 +87,13 @@ export default async function ActorPage({ params }: { params: Promise<{ lang: st
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
+                        <Link
+                          href={`/${lang}/admin/actor/actor-video/${actor.id}`}
+                          className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors"
+                          title="Add Video"
+                        >
+                          <Video size={16} />
+                        </Link>
                         <Link
                           href={`/${lang}/admin/actor/edit/${actor.id}`}
                           className="p-2 text-gray-400 hover:text-[#ffbd59] hover:bg-[#ffbd59]/10 rounded-lg transition-colors"
