@@ -3,6 +3,7 @@ import { supabase } from "@/utils/supabase";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { createClosedTransaction, getPaymentChannels, TransactionPayload } from "@/lib/tripay";
+import { createCryptomusTransaction, CryptomusPayload } from "@/lib/cryptomus";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
@@ -121,9 +122,12 @@ export async function POST(req: Request) {
           ]));
         }
 
+        // Add Cryptomus option at the end
+        keyboard.push([{ text: "Cryptomus (Crypto - USD)", callback_data: `pay_${planId}_Cryptomus` }]);
+
         await sendMessage(
           chatId,
-          `You selected **${plan.name}** (IDR ${plan.price_idr.toLocaleString()}).\n\nPlease select a payment method:`,
+          `You selected **${plan.name}** (IDR ${plan.price_idr.toLocaleString()} / $${plan.price_usd}).\n\nPlease select a payment method:`,
           { inline_keyboard: keyboard }
         );
       } 
@@ -158,8 +162,56 @@ export async function POST(req: Request) {
 
           const merchantRef = `INV-${Date.now()}`;
 
-          // Create Tripay Transaction
-          const payload: TransactionPayload = {
+          if (method === 'Cryptomus') {
+            const { data: gatewaySettings } = await supabase.from("payment_gateway").select("*").limit(1).single();
+            if (!gatewaySettings || !gatewaySettings.cryptomus_config) {
+              await sendMessage(chatId, "Cryptomus is not configured yet.");
+              return NextResponse.json({ ok: true });
+            }
+
+            const cryptoConfig = {
+              merchantId: gatewaySettings.cryptomus_config.merchantId,
+              paymentKey: gatewaySettings.cryptomus_config.paymentKey
+            };
+
+            const payload: CryptomusPayload = {
+              amount: plan.price_usd.toString(),
+              currency: 'USD',
+              order_id: merchantRef
+            };
+
+            try {
+              const res = await createCryptomusTransaction(cryptoConfig, payload);
+              if (res.state === 0 && res.result) {
+                const { error: insertError } = await supabase.from("membership_history").insert([{
+                  id_plan_membership: planId,
+                  id_users: user.id,
+                  status_payment: "Pending",
+                  invoice: res.result.order_id,
+                  detail_payment: res.result
+                }]);
+                
+                if (insertError) {
+                   console.error("Failed to insert membership_history:", insertError);
+                }
+
+                await sendMessage(
+                  chatId,
+                  `Transaction Created! 🎉\n\nMethod: Cryptomus\nAmount: $${plan.price_usd}\nReference: \`${res.result.order_id}\`\n\n[>> PAY WITH CRYPTO <<](${res.result.url})`
+                );
+              } else {
+                console.error("Cryptomus API Error:", res);
+                await sendMessage(chatId, `Failed to create crypto payment: ${res.message}`);
+              }
+            } catch (e: any) {
+              console.error("Crypto payment error:", e);
+              await sendMessage(chatId, "An error occurred during crypto payment processing.");
+            }
+            return NextResponse.json({ ok: true });
+          }
+
+          // Existing Tripay payment logic
+          const payloadTripay: TransactionPayload = {
             method: method,
             merchant_ref: merchantRef,
             amount: Number(plan.price_idr),
@@ -176,7 +228,7 @@ export async function POST(req: Request) {
           };
 
           try {
-            const tripayRes = await createClosedTransaction(tripayConfig, payload);
+            const tripayRes = await createClosedTransaction(tripayConfig, payloadTripay);
 
             if (tripayRes.success) {
               // Insert to membership_history with Pending status
@@ -283,7 +335,7 @@ export async function POST(req: Request) {
 
         const keyboard = plans.map(plan => ([
           {
-            text: `${plan.name} - IDR ${plan.price_idr.toLocaleString()}`,
+            text: `${plan.name} - IDR ${plan.price_idr.toLocaleString()} / $${plan.price_usd}`,
             callback_data: `plan_${plan.id}`
           }
         ]));
