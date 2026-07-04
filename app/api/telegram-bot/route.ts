@@ -7,6 +7,51 @@ import { createCryptomusTransaction, CryptomusPayload } from "@/lib/cryptomus";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
+const VIP_MINI_APP_URL =
+  process.env.TELEGRAM_MINI_APP_URL || "https://vip-vidplus.vercel.app/auth";
+
+function telegramEmail(chatId: number) {
+  return `telegram_${chatId}@vidplus.local`;
+}
+
+function buildMiniAppUrl(userToken: string) {
+  return `${VIP_MINI_APP_URL}?${encodeURIComponent(userToken)}`;
+}
+
+function miniAppReplyMarkup(userToken: string) {
+  return {
+    inline_keyboard: [
+      [
+        {
+          text: "🎬 Buka Vidplus VIP",
+          web_app: { url: buildMiniAppUrl(userToken) },
+        },
+      ],
+    ],
+  };
+}
+
+async function getTelegramUser(chatId: number) {
+  const { data: user } = await supabase
+    .from("users")
+    .select("id, full_name, email, user_token")
+    .eq("email", telegramEmail(chatId))
+    .single();
+  return user;
+}
+
+async function sendMiniAppAccess(chatId: number, introText: string) {
+  const user = await getTelegramUser(chatId);
+  if (!user?.user_token) {
+    await sendMessage(
+      chatId,
+      "Anda belum terdaftar. Ketik /register untuk mendapatkan akun dan token."
+    );
+    return;
+  }
+
+  await sendMessage(chatId, introText, miniAppReplyMarkup(user.user_token));
+}
 
 async function sendMessage(chatId: number, text: string, replyMarkup?: any) {
   if (!TELEGRAM_BOT_TOKEN) {
@@ -71,7 +116,7 @@ export async function POST(req: Request) {
       }).catch(console.error);
 
       // Extract user using their dummy email tied to chat ID
-      const email = `telegram_${chatId}@vidplus.local`;
+      const email = telegramEmail(chatId);
       const { data: user } = await supabase.from("users").select("id, full_name, email").eq("email", email).single();
       
       if (!user) {
@@ -283,7 +328,7 @@ export async function POST(req: Request) {
 
       if (text.startsWith("/register")) {
         const fullName = update.message.from?.first_name || "Telegram User";
-        const email = `telegram_${chatId}@vidplus.local`;
+        const email = telegramEmail(chatId);
         
         const randomPassword = crypto.randomBytes(8).toString('hex');
         const hashedPassword = await bcrypt.hash(randomPassword, 10);
@@ -302,7 +347,11 @@ export async function POST(req: Request) {
           .single();
 
         if (existingUser) {
-          await sendMessage(chatId, `You are already registered!\n\nYour User Token:\n\`${existingUser.user_token}\``);
+          await sendMessage(
+            chatId,
+            `You are already registered!\n\nYour User Token:\n\`${existingUser.user_token}\``,
+            miniAppReplyMarkup(existingUser.user_token)
+          );
           return NextResponse.json({ ok: true });
         }
 
@@ -321,9 +370,16 @@ export async function POST(req: Request) {
         } else {
           await sendMessage(
             chatId,
-            `Registered Success. 🎉\n\nName: ${fullName}\n\n**Your User Token:**\n\`${userToken}\`\n\nPlease keep this token safe.`
+            `Registered Success. 🎉\n\nName: ${fullName}\n\n**Your User Token:**\n\`${userToken}\`\n\nTap tombol di bawah untuk membuka Vidplus VIP.`,
+            miniAppReplyMarkup(userToken)
           );
         }
+      }
+      else if (text === "/app" || text === "/vip") {
+        await sendMiniAppAccess(
+          chatId,
+          "Tap tombol di bawah untuk membuka **Vidplus VIP** dengan akun Anda."
+        );
       } 
       else if (text.startsWith("/plan") || text.startsWith("/buy")) {
         const { data: plans } = await supabase.from("plan_membership").select("*").order("price_idr", { ascending: true });
@@ -347,10 +403,20 @@ export async function POST(req: Request) {
         );
       }
       else if (text === "/start" || text === "/help") {
-         await sendMessage(
+        const user = await getTelegramUser(chatId);
+
+        if (user?.user_token) {
+          await sendMessage(
             chatId,
-            "Welcome! Available commands:\n\n/register - Register and get your User Token\n/plan - Buy a membership plan"
-         );
+            "Welcome back! 👋\n\n/register - Lihat token akun\n/app - Buka Vidplus VIP Mini App\n/plan - Beli membership",
+            miniAppReplyMarkup(user.user_token)
+          );
+        } else {
+          await sendMessage(
+            chatId,
+            "Welcome! 👋\n\n/register - Daftar & dapatkan User Token\n/plan - Beli membership\n\nSetelah daftar, gunakan /app untuk membuka Vidplus VIP."
+          );
+        }
       }
     }
 
