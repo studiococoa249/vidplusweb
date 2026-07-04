@@ -52,7 +52,16 @@ async function pollUpdates() {
   setTimeout(pollUpdates, 1000);
 }
 
-// Pastikan webhook dihapus terlebih dahulu agar getUpdates bisa berjalan
+// PERINGATAN: deleteWebhook akan mematikan bot di production!
+// Hanya jalankan script ini untuk development lokal.
+// Setelah selesai testing, jalankan: node scripts/setup-telegram-webhook.mjs
+console.warn(
+  "\n⚠️  Script ini akan MENGHAPUS webhook production agar polling lokal bisa jalan."
+);
+console.warn(
+  "    Setelah testing, jalankan: node scripts/setup-telegram-webhook.mjs\n"
+);
+
 fetch(`${TELEGRAM_API}/deleteWebhook`)
   .then(() => {
     pollUpdates();
