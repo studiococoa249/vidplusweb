@@ -1,76 +1,76 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
-import videojs from "video.js";
-import "video.js/dist/video-js.css";
-import Hls from "hls.js";
-import type Player from "video.js/dist/types/player";
+import React, { useEffect, useRef, useCallback } from "react";
 
 interface VideoPlayerProps {
-  options: any;
-  onReady?: (player: Player) => void;
+  src: string;
+  autoplay?: boolean;
+  onEnded?: () => void;
+  onTap?: () => void;
 }
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({ options, onReady }) => {
-  const videoRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<Player | null>(null);
+export default function VideoPlayer({
+  src,
+  autoplay = true,
+  onEnded,
+  onTap,
+}: VideoPlayerProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const onEndedRef = useRef(onEnded);
+  onEndedRef.current = onEnded;
 
-  useEffect(() => {
-    // Make sure Video.js player is only initialized once
-    if (!playerRef.current && videoRef.current) {
-      const videoElement = document.createElement("video-js");
-      videoElement.classList.add("vjs-big-play-centered", "vjs-fill");
-      videoRef.current.appendChild(videoElement);
+  const handleTap = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
 
-      const player = (playerRef.current = videojs(videoElement, options, () => {
-        videojs.log("player is ready");
-        onReady && onReady(player);
-      }));
-
-      // If source is HLS and native HLS is not supported (Android usually), use Hls.js
-      const src = options.sources?.[0]?.src;
-      if (src && src.includes(".m3u8")) {
-        const videoNative = player.el().querySelector("video") as HTMLVideoElement;
-        
-        if (Hls.isSupported() && !videoNative.canPlayType("application/vnd.apple.mpegurl")) {
-            const hls = new Hls();
-            hls.loadSource(src);
-            hls.attachMedia(videoNative);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-              const playPromise = player.play();
-              if (playPromise !== undefined) {
-                playPromise.catch(() => {
-                  // handle autoplay block
-                });
-              }
-            });
-        }
-      }
-
-    } else {
-      const player = playerRef.current;
-      if (player) {
-        player.autoplay(options.autoplay);
-        player.src(options.sources);
-      }
+    if (onTap) {
+      onTap();
+      return;
     }
-  }, [options, videoRef, onReady]);
 
-  // Dispose the Video.js player when the functional component unmounts
+    if (video.paused) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [onTap]);
+
   useEffect(() => {
-    const player = playerRef.current;
+    const video = videoRef.current;
+    if (!video || !src) return;
+
+    video.src = src;
+    video.load();
+
+    const onLoaded = () => {
+      if (!autoplay) return;
+      video.play().catch(() => {});
+    };
+
+    const onEnd = () => {
+      onEndedRef.current?.();
+    };
+
+    video.addEventListener("loadeddata", onLoaded);
+    video.addEventListener("ended", onEnd);
 
     return () => {
-      if (player && !player.isDisposed()) {
-        player.dispose();
-        playerRef.current = null;
-      }
+      video.removeEventListener("loadeddata", onLoaded);
+      video.removeEventListener("ended", onEnd);
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
     };
-  }, []);
+  }, [src, autoplay]);
 
   return (
-    <div data-vjs-player className="w-full h-full relative" ref={videoRef} />
+    <video
+      ref={videoRef}
+      className="w-full h-full object-contain bg-black"
+      playsInline
+      webkit-playsinline=""
+      preload="auto"
+      onClick={handleTap}
+    />
   );
-};
-
-export default VideoPlayer;
+}

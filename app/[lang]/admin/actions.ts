@@ -220,6 +220,42 @@ export async function createShortDrama(prevState: any, formData: FormData) {
   redirect(`/${lang}/admin/short/short-video`);
 }
 
+export async function updateShortDrama(prevState: any, formData: FormData) {
+  const id = formData.get("id") as string;
+  const name = formData.get("name") as string;
+  const slug = formData.get("slug") as string;
+  const banner_url = formData.get("banner_url") as string;
+  const desc = formData.get("desc") as string;
+  const total_episode = parseInt(formData.get("total_episode") as string || "0");
+  const lang = formData.get("lang") as string || "id";
+  const id_genre = formData.getAll("id_genre");
+
+  if (!id || !name || !slug) {
+    return { error: "ID, Judul, dan Slug wajib diisi." };
+  }
+
+  const payload = {
+    name,
+    slug,
+    banner_url,
+    desc,
+    total_episode,
+    id_genre,
+  };
+
+  const { error } = await supabase.from("short_drama").update(payload).eq("id", id);
+
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "Slug sudah digunakan." };
+    }
+    return { error: "Gagal memperbarui drama pendek." };
+  }
+
+  revalidatePath(`/${lang}/admin/short/short-video`);
+  redirect(`/${lang}/admin/short/short-video`);
+}
+
 export async function deleteShortDrama(prevState: any, formData: FormData) {
   const id = formData.get("id") as string;
   const lang = formData.get("lang") as string || "id";

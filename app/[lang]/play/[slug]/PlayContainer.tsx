@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import VideoPlayer from "@/components/VideoPlayer";
-import { ListVideo, X } from "lucide-react";
+import { ListVideo, X, Play, Pause, SkipForward, ChevronRight } from "lucide-react";
 
 interface Episode {
   id: string;
@@ -17,91 +17,223 @@ interface Props {
 }
 
 export default function PlayContainer({ episodes, dramaName }: Props) {
-  const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [showEpisodeList, setShowEpisodeList] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const [progress, setProgress] = useState(0);
+  const [showNextOverlay, setShowNextOverlay] = useState(false);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
+  const hideControlsTimer = useRef<ReturnType<typeof setTimeout>>(null);
+  const progressTimer = useRef<ReturnType<typeof setInterval>>(null);
 
-  const currentEpisode = episodes[currentEpisodeIndex] || null;
+  const currentEpisode = episodes[currentIndex] || null;
+  const hasNext = currentIndex < episodes.length - 1;
 
-  // Recreate options when url changes so the player can update
-  const videoJsOptions = currentEpisode ? {
-    autoplay: true,
-    controls: true,
-    responsive: true,
-    fill: true,
-    sources: [{
-      src: currentEpisode.url,
-      type: "application/x-mpegURL"
-    }]
-  } : null;
+  const goToNext = useCallback(() => {
+    if (!hasNext) return;
+    setShowNextOverlay(false);
+    setProgress(0);
+    setIsPaused(false);
+    setCurrentIndex((i) => i + 1);
+  }, [hasNext]);
+
+  const goToEpisode = useCallback((index: number) => {
+    setShowNextOverlay(false);
+    setProgress(0);
+    setIsPaused(false);
+    setCurrentIndex(index);
+    setShowEpisodeList(false);
+  }, []);
+
+  const onEnded = useCallback(() => {
+    if (hasNext) {
+      setShowNextOverlay(true);
+      const timer = setTimeout(goToNext, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [hasNext, goToNext]);
+
+  const flashControls = useCallback(() => {
+    setShowControls(true);
+    if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
+    hideControlsTimer.current = setTimeout(() => setShowControls(false), 3000);
+  }, []);
+
+  const handleTap = useCallback(() => {
+    if (showNextOverlay) return;
+
+    const video = videoContainerRef.current?.querySelector("video");
+    if (!video) return;
+
+    if (video.paused) {
+      video.play().catch(() => {});
+      setIsPaused(false);
+    } else {
+      video.pause();
+      setIsPaused(true);
+    }
+    flashControls();
+  }, [showNextOverlay, flashControls]);
+
+  useEffect(() => {
+    if (progressTimer.current) clearInterval(progressTimer.current);
+
+    progressTimer.current = setInterval(() => {
+      const video = videoContainerRef.current?.querySelector("video");
+      if (video && video.duration) {
+        setProgress((video.currentTime / video.duration) * 100);
+      }
+    }, 250);
+
+    return () => {
+      if (progressTimer.current) clearInterval(progressTimer.current);
+    };
+  }, [currentIndex]);
+
+  useEffect(() => {
+    flashControls();
+    return () => {
+      if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
+    };
+  }, [currentIndex, flashControls]);
+
+  if (!currentEpisode) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">
+        Belum ada episode tersedia.
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full h-full relative group flex items-center justify-center bg-black">
-      {videoJsOptions ? (
-        <VideoPlayer options={videoJsOptions} />
-      ) : (
-        <div className="text-gray-500 text-sm p-4 text-center">
-          Belum ada episode tersedia untuk drama ini.
+    <div ref={videoContainerRef} className="w-full h-full relative bg-black select-none">
+      {/* Video */}
+      <VideoPlayer
+        key={currentEpisode.id}
+        src={currentEpisode.url}
+        autoplay
+        onEnded={onEnded}
+        onTap={handleTap}
+      />
+
+      {/* Progress bar */}
+      <div className="absolute bottom-0 left-0 w-full h-1 bg-white/10 z-20">
+        <div
+          className="h-full bg-[#ffbd59] transition-[width] duration-200"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      {/* Episode info badge */}
+      <div
+        className={`absolute top-4 right-4 z-20 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-1.5 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0"}`}
+      >
+        <span className="text-[#ffbd59] text-xs font-bold">EP {currentEpisode.episode}</span>
+        <span className="text-white/40 text-xs">/ {episodes.length}</span>
+      </div>
+
+      {/* Center pause/play icon */}
+      {isPaused && showControls && (
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+          <div className="w-16 h-16 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center animate-fade-in">
+            <Play size={28} className="text-white ml-1" fill="white" />
+          </div>
         </div>
       )}
-      
-      {/* Overlay UI when episode list is not open */}
-      <div className="absolute right-4 bottom-32 z-20 flex flex-col items-center gap-4">
-        <button 
-          onClick={() => setShowEpisodeList(true)}
-          className="w-12 h-12 bg-black/50 backdrop-blur-md border border-white/10 rounded-full flex flex-col items-center justify-center text-white hover:bg-black/70 transition"
+
+      {/* Side buttons */}
+      <div
+        className={`absolute right-3 bottom-16 z-20 flex flex-col items-center gap-4 transition-opacity duration-300 ${showControls && !showNextOverlay ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+      >
+        {hasNext && (
+          <button
+            onClick={(e) => { e.stopPropagation(); goToNext(); }}
+            className="w-12 h-12 bg-black/50 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
+          >
+            <SkipForward size={20} />
+          </button>
+        )}
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowEpisodeList(true); }}
+          className="w-12 h-12 bg-black/50 backdrop-blur-md border border-white/10 rounded-full flex flex-col items-center justify-center text-white active:scale-90 transition-transform"
         >
-          <ListVideo size={20} />
-          <span className="text-[10px] mt-0.5">Eps</span>
+          <ListVideo size={18} />
+          <span className="text-[9px] mt-0.5 opacity-70">Eps</span>
         </button>
       </div>
 
-      {/* Episode List Bottom Sheet */}
-      <div 
-        className={`absolute bottom-0 left-0 w-full bg-[#121622]/95 backdrop-blur-xl border-t border-gray-800 rounded-t-3xl z-30 transition-transform duration-300 ease-in-out ${showEpisodeList ? 'translate-y-0' : 'translate-y-full'}`}
-        style={{ height: '60%' }}
-      >
-        <div className="p-4 border-b border-gray-800 flex justify-between items-center">
-          <div>
-            <h3 className="font-bold text-white">Daftar Episode</h3>
-            <p className="text-xs text-gray-400">{dramaName} • {episodes.length} Episode</p>
-          </div>
-          <button 
-            onClick={() => setShowEpisodeList(false)}
-            className="p-2 bg-gray-800 rounded-full text-gray-400 hover:text-white transition"
+      {/* Auto next episode overlay */}
+      {showNextOverlay && hasNext && (
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm z-30 flex flex-col items-center justify-center gap-4 animate-fade-in">
+          <p className="text-white/60 text-sm">Episode selanjutnya</p>
+          <button
+            onClick={goToNext}
+            className="flex items-center gap-2 bg-[#ffbd59] text-black font-bold px-6 py-3 rounded-2xl text-sm active:scale-95 transition-transform shadow-lg shadow-[#ffbd59]/20"
           >
-            <X size={16} />
+            Episode {episodes[currentIndex + 1]?.episode}
+            <ChevronRight size={18} />
           </button>
-        </div>
-
-        <div className="p-4 overflow-y-auto h-[calc(100%-70px)]">
-          <div className="grid grid-cols-5 sm:grid-cols-6 gap-2">
-            {episodes.map((ep, index) => {
-              const isActive = index === currentEpisodeIndex;
-              return (
-                <button
-                  key={ep.id}
-                  onClick={() => {
-                    setCurrentEpisodeIndex(index);
-                    setShowEpisodeList(false);
-                  }}
-                  className={`aspect-square rounded-xl flex items-center justify-center text-sm font-medium transition-all ${
-                    isActive 
-                      ? "bg-[#ffbd59] text-black shadow-[0_0_15px_rgba(255,189,89,0.3)] border-2 border-[#ffbd59]" 
-                      : "bg-[#0a0c13] border border-gray-700 text-gray-300 hover:border-[#ffbd59]/50 hover:text-white"
-                  }`}
-                >
-                  {ep.episode}
-                </button>
-              );
-            })}
+          <button
+            onClick={() => setShowNextOverlay(false)}
+            className="text-white/40 text-xs mt-2 hover:text-white/70 transition"
+          >
+            Batal
+          </button>
+          <div className="w-32 h-1 bg-white/10 rounded-full overflow-hidden mt-2">
+            <div className="h-full bg-[#ffbd59] animate-shrink-bar" />
           </div>
-          {episodes.length === 0 && (
-            <div className="text-center text-gray-500 mt-10">
-              Belum ada episode tersedia.
-            </div>
-          )}
         </div>
-      </div>
+      )}
+
+      {/* Episode list bottom sheet */}
+      {showEpisodeList && (
+        <div className="absolute inset-0 z-40" onClick={() => setShowEpisodeList(false)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <div
+            className="absolute bottom-0 left-0 w-full bg-[#121622]/98 backdrop-blur-xl border-t border-gray-800 rounded-t-3xl animate-slide-up"
+            style={{ maxHeight: "65%" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-center pt-2 pb-1">
+              <div className="w-10 h-1 bg-gray-700 rounded-full" />
+            </div>
+            <div className="px-4 pb-3 flex justify-between items-center">
+              <div>
+                <h3 className="font-bold text-white text-sm">{dramaName}</h3>
+                <p className="text-xs text-gray-500">{episodes.length} Episode</p>
+              </div>
+              <button
+                onClick={() => setShowEpisodeList(false)}
+                className="p-2 bg-gray-800 rounded-full text-gray-400 active:scale-90 transition-transform"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="px-4 pb-6 overflow-y-auto hide-scrollbar" style={{ maxHeight: "calc(65vh - 80px)" }}>
+              <div className="grid grid-cols-5 gap-2">
+                {episodes.map((ep, index) => {
+                  const isActive = index === currentIndex;
+                  return (
+                    <button
+                      key={ep.id}
+                      onClick={() => goToEpisode(index)}
+                      className={`aspect-square rounded-xl flex items-center justify-center text-sm font-semibold transition-all active:scale-90 ${
+                        isActive
+                          ? "bg-[#ffbd59] text-black shadow-[0_0_12px_rgba(255,189,89,0.4)]"
+                          : "bg-[#0a0c13] border border-gray-700/50 text-gray-400 active:border-[#ffbd59]/50"
+                      }`}
+                    >
+                      {ep.episode}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

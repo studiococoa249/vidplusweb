@@ -137,6 +137,7 @@ CREATE TABLE play_short_drama (
     url TEXT NOT NULL,
     episode INTEGER,
     duration INTEGER,
+    is_free user_membership DEFAULT 'Free', -- 'Free' = dapat ditonton gratis, 'VIP' = khusus member VIP
     create_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     update_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
