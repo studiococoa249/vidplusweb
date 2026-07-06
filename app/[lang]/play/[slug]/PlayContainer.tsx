@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import VideoPlayer from "@/components/VideoPlayer";
-import { ListVideo, X, Play, Pause, SkipForward, ChevronRight } from "lucide-react";
+import { ListVideo, X, Play, SkipForward, ChevronRight, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 
 interface Episode {
   id: string;
@@ -16,6 +16,8 @@ interface Props {
   dramaName: string;
 }
 
+type PlayerState = "loading" | "ready" | "error";
+
 export default function PlayContainer({ episodes, dramaName }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showEpisodeList, setShowEpisodeList] = useState(false);
@@ -23,6 +25,9 @@ export default function PlayContainer({ episodes, dramaName }: Props) {
   const [showControls, setShowControls] = useState(true);
   const [progress, setProgress] = useState(0);
   const [showNextOverlay, setShowNextOverlay] = useState(false);
+  const [playerState, setPlayerState] = useState<PlayerState>("loading");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [playerKey, setPlayerKey] = useState(0);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const hideControlsTimer = useRef<ReturnType<typeof setTimeout>>(null);
   const progressTimer = useRef<ReturnType<typeof setInterval>>(null);
@@ -35,6 +40,7 @@ export default function PlayContainer({ episodes, dramaName }: Props) {
     setShowNextOverlay(false);
     setProgress(0);
     setIsPaused(false);
+    setPlayerState("loading");
     setCurrentIndex((i) => i + 1);
   }, [hasNext]);
 
@@ -42,8 +48,15 @@ export default function PlayContainer({ episodes, dramaName }: Props) {
     setShowNextOverlay(false);
     setProgress(0);
     setIsPaused(false);
+    setPlayerState("loading");
     setCurrentIndex(index);
     setShowEpisodeList(false);
+  }, []);
+
+  const retryLoad = useCallback(() => {
+    setPlayerState("loading");
+    setErrorMsg("");
+    setPlayerKey((k) => k + 1);
   }, []);
 
   const onEnded = useCallback(() => {
@@ -54,6 +67,15 @@ export default function PlayContainer({ episodes, dramaName }: Props) {
     }
   }, [hasNext, goToNext]);
 
+  const onLoadStart = useCallback(() => setPlayerState("loading"), []);
+
+  const onReady = useCallback(() => setPlayerState("ready"), []);
+
+  const onError = useCallback((msg: string) => {
+    setPlayerState("error");
+    setErrorMsg(msg);
+  }, []);
+
   const flashControls = useCallback(() => {
     setShowControls(true);
     if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
@@ -61,7 +83,7 @@ export default function PlayContainer({ episodes, dramaName }: Props) {
   }, []);
 
   const handleTap = useCallback(() => {
-    if (showNextOverlay) return;
+    if (showNextOverlay || playerState !== "ready") return;
 
     const video = videoContainerRef.current?.querySelector("video");
     if (!video) return;
@@ -74,7 +96,7 @@ export default function PlayContainer({ episodes, dramaName }: Props) {
       setIsPaused(true);
     }
     flashControls();
-  }, [showNextOverlay, flashControls]);
+  }, [showNextOverlay, flashControls, playerState]);
 
   useEffect(() => {
     if (progressTimer.current) clearInterval(progressTimer.current);
@@ -108,14 +130,47 @@ export default function PlayContainer({ episodes, dramaName }: Props) {
 
   return (
     <div ref={videoContainerRef} className="w-full h-full relative bg-black select-none">
-      {/* Video */}
       <VideoPlayer
-        key={currentEpisode.id}
+        key={`${currentEpisode.id}-${playerKey}`}
         src={currentEpisode.url}
         autoplay
         onEnded={onEnded}
         onTap={handleTap}
+        onLoadStart={onLoadStart}
+        onReady={onReady}
+        onError={onError}
       />
+
+      {/* Loading spinner overlay */}
+      {playerState === "loading" && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none bg-black/40">
+          <Loader2 size={40} className="text-[#ffbd59] animate-spin" />
+          <p className="text-white/60 text-xs mt-3">Memuat video...</p>
+        </div>
+      )}
+
+      {/* Error overlay with retry */}
+      {playerState === "error" && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-black/70 backdrop-blur-sm gap-3">
+          <AlertTriangle size={36} className="text-red-400" />
+          <p className="text-white/70 text-sm text-center px-8 max-w-xs">{errorMsg || "Gagal memuat video"}</p>
+          <button
+            onClick={retryLoad}
+            className="flex items-center gap-2 bg-[#ffbd59] text-black font-semibold px-5 py-2.5 rounded-xl text-sm active:scale-95 transition-transform mt-2"
+          >
+            <RefreshCw size={16} />
+            Coba Lagi
+          </button>
+          {hasNext && (
+            <button
+              onClick={goToNext}
+              className="text-white/50 text-xs mt-1 hover:text-white/80 transition"
+            >
+              Lewati ke episode berikutnya →
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Progress bar */}
       <div className="absolute bottom-0 left-0 w-full h-1 bg-white/10 z-20">
@@ -134,7 +189,7 @@ export default function PlayContainer({ episodes, dramaName }: Props) {
       </div>
 
       {/* Center pause/play icon */}
-      {isPaused && showControls && (
+      {isPaused && showControls && playerState === "ready" && (
         <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
           <div className="w-16 h-16 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center animate-fade-in">
             <Play size={28} className="text-white ml-1" fill="white" />
@@ -144,7 +199,7 @@ export default function PlayContainer({ episodes, dramaName }: Props) {
 
       {/* Side buttons */}
       <div
-        className={`absolute right-3 bottom-16 z-20 flex flex-col items-center gap-4 transition-opacity duration-300 ${showControls && !showNextOverlay ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        className={`absolute right-3 bottom-16 z-20 flex flex-col items-center gap-4 transition-opacity duration-300 ${showControls && !showNextOverlay && playerState === "ready" ? "opacity-100" : "opacity-0 pointer-events-none"}`}
       >
         {hasNext && (
           <button
