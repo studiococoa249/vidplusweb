@@ -1,65 +1,79 @@
-import crypto from 'crypto';
+const CUSTOM_API_BASE_URL = 'https://socialboosters.web.id/api/v1';
 
 interface TripayConfig {
-  mode: 'Sandbox' | 'Production';
-  apiKey: string;
-  privateKey: string;
-  merchantCode: string;
+  api_key: string;
+  kode_api: string;
 }
 
 export interface TransactionPayload {
   method: string;
-  merchant_ref: string;
   amount: number;
-  customer_name: string;
-  customer_email: string;
-  order_items: Array<{
-    sku: string;
-    name: string;
-    price: number;
-    quantity: number;
-  }>;
-  return_url?: string;
-  expired_time?: number;
 }
 
-export async function createClosedTransaction(config: TripayConfig, payload: TransactionPayload) {
-  const baseUrl = config.mode === 'Sandbox' 
-    ? 'https://tripay.co.id/api-sandbox/transaction/create'
-    : 'https://tripay.co.id/api/transaction/create';
+export interface TripayChannel {
+  code: string;
+  name: string;
+  payment_type: string;
+}
 
-  const signature = crypto
-    .createHmac('sha256', config.privateKey)
-    .update(config.merchantCode + payload.merchant_ref + payload.amount)
-    .digest('hex');
+export interface TripayTransactionResult {
+  reference: string;
+  status: string;
+  amount: number;
+  payment: {
+    va_number?: string;
+    qr_url?: string;
+  };
+}
 
-  const response = await fetch(baseUrl, {
-    method: 'POST',
+export async function getPaymentChannels(config: TripayConfig): Promise<{ success: boolean; data: TripayChannel[] }> {
+  const response = await fetch(`${CUSTOM_API_BASE_URL}/payment/channels`, {
+    method: 'GET',
     headers: {
-      'Authorization': `Bearer ${config.apiKey}`,
-      'Content-Type': 'application/json'
+      'api_key': config.api_key,
+      'kode_api': config.kode_api,
     },
-    body: JSON.stringify({
-      ...payload,
-      signature
-    })
   });
 
   const data = await response.json();
   return data;
 }
 
-export async function getPaymentChannels(config: TripayConfig) {
-  const baseUrl = config.mode === 'Sandbox' 
-    ? 'https://tripay.co.id/api-sandbox/merchant/payment-channel'
-    : 'https://tripay.co.id/api/merchant/payment-channel';
-
-  const response = await fetch(baseUrl, {
-    method: 'GET',
+export async function createClosedTransaction(
+  config: TripayConfig,
+  payload: TransactionPayload
+): Promise<{ success: boolean; data: TripayTransactionResult; message?: string }> {
+  const response = await fetch(`${CUSTOM_API_BASE_URL}/payment/create`, {
+    method: 'POST',
     headers: {
-      'Authorization': `Bearer ${config.apiKey}`
-    }
+      'Content-Type': 'application/json',
+      'api_key': config.api_key,
+      'kode_api': config.kode_api,
+    },
+    body: JSON.stringify({
+      method: payload.method,
+      amount: payload.amount,
+    }),
   });
+
+  const data = await response.json();
+  return data;
+}
+
+export async function getTransactionDetail(
+  config: TripayConfig,
+  reference: string
+): Promise<{ success: boolean; data: TripayTransactionResult }> {
+  const response = await fetch(
+    `${CUSTOM_API_BASE_URL}/payment/detail?reference=${encodeURIComponent(reference)}`,
+    {
+      method: 'GET',
+      headers: {
+        'api_key': config.api_key,
+        'kode_api': config.kode_api,
+      },
+    }
+  );
 
   const data = await response.json();
   return data;

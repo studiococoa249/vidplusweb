@@ -33,15 +33,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, message: 'Gateway not configured' }, { status: 500 });
     }
 
-    const privateKey = gatewaySettings.tripay_config.privateKey;
-    const generatedSignature = crypto.createHmac('sha256', privateKey).update(rawBody).digest('hex');
+    // Parse body first to get fields for signature verification
+    const payload = JSON.parse(rawBody);
 
-    if (signature !== generatedSignature) {
+    // Verify signature sesuai format custom API:
+    // HMAC-SHA256 dari JSON({reference, merchant_ref, status}) menggunakan kode_api (private_key)
+    const kodeApi = gatewaySettings.tripay_config.private_key;
+    const expectedSignature = crypto
+      .createHmac('sha256', kodeApi)
+      .update(JSON.stringify({
+        reference: payload.reference,
+        merchant_ref: payload.merchant_ref,
+        status: payload.status,
+      }))
+      .digest('hex');
+
+    const sigBuffer = Buffer.from(signature || '', 'hex');
+    const expBuffer = Buffer.from(expectedSignature, 'hex');
+    const isValidSignature = sigBuffer.length === expBuffer.length &&
+      crypto.timingSafeEqual(sigBuffer, expBuffer);
+
+    if (!isValidSignature) {
+      console.error('Invalid webhook signature');
       return NextResponse.json({ success: false, message: 'Invalid signature' }, { status: 400 });
     }
 
-    const payload = JSON.parse(rawBody);
-    console.log("Tripay Webhook Received:", payload.status, payload.reference);
+    console.log('Tripay Webhook Received:', payload.status, payload.reference);
 
     // Only process when payment is PAID
     if (payload.status === 'PAID') {

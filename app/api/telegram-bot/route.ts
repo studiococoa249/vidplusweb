@@ -142,17 +142,15 @@ export async function POST(req: Request) {
         }
 
         const tripayConfig = {
-          mode: gatewaySettings.mode || 'Sandbox',
-          apiKey: gatewaySettings.tripay_config.apiKey,
-          privateKey: gatewaySettings.tripay_config.privateKey,
-          merchantCode: gatewaySettings.tripay_config.merchantCode,
+          api_key: gatewaySettings.tripay_config.api_key,
+          kode_api: gatewaySettings.tripay_config.private_key,
         };
 
         const channelsRes = await getPaymentChannels(tripayConfig);
         let keyboard: any[] = [];
         
-        if (channelsRes.success && channelsRes.data) {
-          // Filter active channels and map to buttons
+        if (channelsRes.success && channelsRes.data && channelsRes.data.length > 0) {
+          // Map channels to inline keyboard buttons (filter only active)
           keyboard = channelsRes.data
             .filter((ch: any) => ch.active)
             .map((ch: any) => ([
@@ -161,7 +159,7 @@ export async function POST(req: Request) {
         } else {
           // Fallback if API fails
           console.error("Failed to fetch Tripay channels:", channelsRes);
-          const methods = ["QRIS", "BRIVA", "BCAVA", "MANDIRIVA", "OVO", "DANA"];
+          const methods = ["BCAVA", "QRIS"];
           keyboard = methods.map(method => ([
             { text: method, callback_data: `pay_${planId}_${method}` }
           ]));
@@ -199,10 +197,8 @@ export async function POST(req: Request) {
           }
 
           const tripayConfig = {
-            mode: gatewaySettings.mode || 'Sandbox',
-            apiKey: gatewaySettings.tripay_config.apiKey,
-            privateKey: gatewaySettings.tripay_config.privateKey,
-            merchantCode: gatewaySettings.tripay_config.merchantCode,
+            api_key: gatewaySettings.tripay_config.api_key,
+            kode_api: gatewaySettings.tripay_config.private_key,
           };
 
           const merchantRef = `INV-${Date.now()}`;
@@ -255,21 +251,10 @@ export async function POST(req: Request) {
             return NextResponse.json({ ok: true });
           }
 
-          // Existing Tripay payment logic
+          // Custom Tripay payment logic
           const payloadTripay: TransactionPayload = {
             method: method,
-            merchant_ref: merchantRef,
             amount: Number(plan.price_idr),
-            customer_name: user.full_name,
-            customer_email: user.email,
-            order_items: [
-              {
-                sku: `PLAN-${planId.substring(0,8)}`,
-                name: plan.name,
-                price: Number(plan.price_idr),
-                quantity: 1
-              }
-            ]
           };
 
           try {
@@ -289,31 +274,34 @@ export async function POST(req: Request) {
                  console.error("Failed to insert membership_history:", insertError);
               }
 
-              // Send photo if it's a QR code
-              if (tripayRes.data.qr_url) {
+              // Send QR code photo if available
+              const qrUrl = tripayRes.data.payment?.qr_url;
+              if (qrUrl) {
                 await sendPhoto(
-                  chatId, 
-                  tripayRes.data.qr_url, 
-                  `Scan this QR Code to pay via ${method}`
+                  chatId,
+                  qrUrl,
+                  `Scan QR Code ini untuk membayar via ${method}`
                 );
               }
 
+              // Show VA number if available
               let paymentInstructions = "";
-              if (tripayRes.data.pay_code) {
-                paymentInstructions = `\n**Payment Code / Virtual Account:**\n\`${tripayRes.data.pay_code}\`\n`;
+              const vaNumber = tripayRes.data.payment?.va_number;
+              if (vaNumber) {
+                paymentInstructions = `\n*Nomor Virtual Account:*\n\`${vaNumber}\`\n`;
               }
 
               await sendMessage(
                 chatId,
-                `Transaction Created! 🎉\n\nMethod: ${method}\nAmount: IDR ${plan.price_idr.toLocaleString()}\nReference: \`${tripayRes.data.reference}\`${paymentInstructions}`
+                `Transaksi Berhasil Dibuat! 🎉\n\nMetode: ${method}\nJumlah: IDR ${plan.price_idr.toLocaleString()}\nReferensi: \`${tripayRes.data.reference}\`${paymentInstructions}`
               );
             } else {
               console.error("Tripay API Error:", tripayRes);
-              await sendMessage(chatId, `Failed to create payment: ${tripayRes.message}`);
+              await sendMessage(chatId, `Gagal membuat pembayaran: ${tripayRes.message}`);
             }
           } catch (e: any) {
             console.error("Payment error:", e);
-            await sendMessage(chatId, "An error occurred during payment processing.");
+            await sendMessage(chatId, "Terjadi kesalahan saat memproses pembayaran.");
           }
         }
       }
