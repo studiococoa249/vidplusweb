@@ -252,9 +252,16 @@ export async function POST(req: Request) {
           }
 
           // Custom Tripay payment logic
+          const appDomain = req.headers.get("host") || "vidplusweb.vercel.app";
+          const isLocal = appDomain.includes("localhost");
+          const protocol = isLocal ? "http" : "https";
+          const callbackUrl = `${protocol}://${appDomain}/api/tripay/callback`;
+
           const payloadTripay: TransactionPayload = {
             method: method,
             amount: Number(plan.price_idr),
+            callback_url: callbackUrl,
+            return_url: `${protocol}://${appDomain}`
           };
 
           try {

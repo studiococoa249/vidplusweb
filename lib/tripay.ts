@@ -8,6 +8,8 @@ interface TripayConfig {
 export interface TransactionPayload {
   method: string;
   amount: number;
+  callback_url?: string;
+  return_url?: string;
 }
 
 export interface TripayChannel {
@@ -53,6 +55,8 @@ export async function createClosedTransaction(
     body: JSON.stringify({
       method: payload.method,
       amount: payload.amount,
+      ...(payload.callback_url && { callback_url: payload.callback_url }),
+      ...(payload.return_url && { return_url: payload.return_url }),
     }),
   });
 
