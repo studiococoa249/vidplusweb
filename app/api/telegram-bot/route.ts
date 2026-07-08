@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/utils/supabase";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { createClosedTransaction, getPaymentChannels, TransactionPayload } from "@/lib/tripay";
+import { createClosedTransaction, getPaymentChannels, getTransactionDetail, TransactionPayload } from "@/lib/tripay";
 import { createCryptomusTransaction, CryptomusPayload } from "@/lib/cryptomus";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -390,19 +390,58 @@ export async function POST(req: Request) {
           { inline_keyboard: keyboard }
         );
       }
+      else if (text.startsWith("/pstatus")) {
+        const args = text.split(" ");
+        if (args.length < 2) {
+          await sendMessage(chatId, "Please provide a reference number.\nUsage: `/pstatus [reference]`");
+          return NextResponse.json({ ok: true });
+        }
+        
+        const reference = args[1].trim();
+
+        // Fetch gateway config
+        const { data: gatewaySettings } = await supabase.from("payment_gateway").select("*").limit(1).single();
+        if (!gatewaySettings || (!gatewaySettings.socialbooster_config && !gatewaySettings.tripay_config)) {
+          await sendMessage(chatId, "Payment gateway is not configured yet.");
+          return NextResponse.json({ ok: true });
+        }
+
+        const config = gatewaySettings.socialbooster_config || gatewaySettings.tripay_config;
+        const tripayConfig = {
+          api_key: config.api_key || config.apiKey,
+          kode_api: config.kode_api || config.private_key || config.privateKey,
+        };
+
+        try {
+          const detailRes: any = await getTransactionDetail(tripayConfig, reference);
+
+          if (detailRes.success && detailRes.data) {
+            const data = detailRes.data;
+            await sendMessage(
+              chatId,
+              `*Payment Status*\n\nReference: \`${data.reference}\`\nStatus: *${data.status}*\nAmount: IDR ${data.amount.toLocaleString()}`
+            );
+          } else {
+            await sendMessage(chatId, `Failed to get status: ${detailRes.message || 'Transaction not found'}`);
+          }
+        } catch (error) {
+          console.error("Error checking pstatus:", error);
+          await sendMessage(chatId, "An error occurred while checking payment status.");
+        }
+      }
       else if (text === "/start" || text === "/help") {
         const user = await getTelegramUser(chatId);
 
         if (user?.user_token) {
           await sendMessage(
             chatId,
-            "Welcome back! 👋\n\n/register - View your account token\n/app - Open Vidplus VIP Mini App\n/plan - Purchase membership",
+            "Welcome back! 👋\n\n/register - View your account token\n/app - Open Vidplus VIP Mini App\n/plan - Purchase membership\n/pstatus [ref] - Check payment status",
             miniAppReplyMarkup(user.user_token)
           );
         } else {
           await sendMessage(
             chatId,
-            "Welcome! 👋\n\n/register - Register and get your User Token\n/plan - Purchase membership\n\nAfter registering, use /app to open Vidplus VIP."
+            "Welcome! 👋\n\n/register - Register and get your User Token\n/plan - Purchase membership\n/pstatus [ref] - Check payment status\n\nAfter registering, use /app to open Vidplus VIP."
           );
         }
       }
