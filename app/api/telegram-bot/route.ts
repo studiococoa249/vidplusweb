@@ -23,7 +23,7 @@ function miniAppReplyMarkup(userToken: string) {
     inline_keyboard: [
       [
         {
-          text: "🎬 Buka Vidplus VIP",
+          text: "🎬 Open Vidplus VIP",
           web_app: { url: buildMiniAppUrl(userToken) },
         },
       ],
@@ -45,7 +45,7 @@ async function sendMiniAppAccess(chatId: number, introText: string) {
   if (!user?.user_token) {
     await sendMessage(
       chatId,
-      "Anda belum terdaftar. Ketik /register untuk mendapatkan akun dan token."
+      "You are not registered yet. Type /register to create your account."
     );
     return;
   }
@@ -166,11 +166,11 @@ export async function POST(req: Request) {
         }
 
         // Add Cryptomus option at the end
-        keyboard.push([{ text: "Cryptomus (Crypto - USD)", callback_data: `pay_${planId}_Cryptomus` }]);
+        keyboard.push([{ text: "🪙 Cryptomus (Crypto - USD)", callback_data: `pay_${planId}_Cryptomus` }]);
 
         await sendMessage(
           chatId,
-          `You selected **${plan.name}** (IDR ${plan.price_idr.toLocaleString()} / $${plan.price_usd}).\n\nPlease select a payment method:`,
+          `You selected *${plan.name}* (IDR ${plan.price_idr.toLocaleString()} / $${plan.price_usd}).\n\nSelect a payment method:`,
           { inline_keyboard: keyboard }
         );
       }
@@ -280,7 +280,7 @@ export async function POST(req: Request) {
                 await sendPhoto(
                   chatId,
                   qrUrl,
-                  `Scan QR Code ini untuk membayar via ${method}`
+                  `Scan this QR Code to pay via ${method}`
                 );
               }
 
@@ -288,20 +288,20 @@ export async function POST(req: Request) {
               let paymentInstructions = "";
               const vaNumber = tripayRes.data.payment?.va_number;
               if (vaNumber) {
-                paymentInstructions = `\n*Nomor Virtual Account:*\n\`${vaNumber}\`\n`;
+                paymentInstructions = `\n*Virtual Account Number:*\n\`${vaNumber}\`\n`;
               }
 
               await sendMessage(
                 chatId,
-                `Transaksi Berhasil Dibuat! 🎉\n\nMetode: ${method}\nJumlah: IDR ${plan.price_idr.toLocaleString()}\nReferensi: \`${tripayRes.data.reference}\`${paymentInstructions}`
+                `Transaction Created! 🎉\n\nMethod: ${method}\nAmount: IDR ${plan.price_idr.toLocaleString()}\nReference: \`${tripayRes.data.reference}\`${paymentInstructions}\n\nPlease complete your payment before it expires.`
               );
             } else {
               console.error("Tripay API Error:", tripayRes);
-              await sendMessage(chatId, `Gagal membuat pembayaran: ${tripayRes.message}`);
+              await sendMessage(chatId, `Failed to create payment: ${tripayRes.message}`);
             }
           } catch (e: any) {
             console.error("Payment error:", e);
-            await sendMessage(chatId, "Terjadi kesalahan saat memproses pembayaran.");
+            await sendMessage(chatId, "An error occurred during payment processing. Please try again.");
           }
         }
       }
@@ -358,7 +358,7 @@ export async function POST(req: Request) {
         } else {
           await sendMessage(
             chatId,
-            `Registered Success. 🎉\n\nName: ${fullName}\n\n**Your User Token:**\n\`${userToken}\`\n\nTap tombol di bawah untuk membuka Vidplus VIP.`,
+            `Registration Successful! 🎉\n\nName: ${fullName}\n\n*Your User Token:*\n\`${userToken}\`\n\nTap the button below to open Vidplus VIP.`,
             miniAppReplyMarkup(userToken)
           );
         }
@@ -366,7 +366,7 @@ export async function POST(req: Request) {
       else if (text === "/app" || text === "/vip") {
         await sendMiniAppAccess(
           chatId,
-          "Tap tombol di bawah untuk membuka **Vidplus VIP** dengan akun Anda."
+          "Tap the button below to open *Vidplus VIP* with your account."
         );
       }
       else if (text.startsWith("/plan") || text.startsWith("/buy")) {
@@ -396,13 +396,13 @@ export async function POST(req: Request) {
         if (user?.user_token) {
           await sendMessage(
             chatId,
-            "Welcome back! 👋\n\n/register - Lihat token akun\n/app - Buka Vidplus VIP Mini App\n/plan - Beli membership",
+            "Welcome back! 👋\n\n/register - View your account token\n/app - Open Vidplus VIP Mini App\n/plan - Purchase membership",
             miniAppReplyMarkup(user.user_token)
           );
         } else {
           await sendMessage(
             chatId,
-            "Welcome! 👋\n\n/register - Daftar & dapatkan User Token\n/plan - Beli membership\n\nSetelah daftar, gunakan /app untuk membuka Vidplus VIP."
+            "Welcome! 👋\n\n/register - Register and get your User Token\n/plan - Purchase membership\n\nAfter registering, use /app to open Vidplus VIP."
           );
         }
       }
