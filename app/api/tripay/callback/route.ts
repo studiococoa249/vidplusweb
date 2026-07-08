@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       .limit(1)
       .single();
 
-    if (!gatewaySettings || !gatewaySettings.tripay_config) {
+    if (!gatewaySettings || !gatewaySettings.socialbooster_config) {
       return NextResponse.json({ success: false, message: 'Gateway not configured' }, { status: 500 });
     }
 
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     // Verify signature sesuai format custom API:
     // HMAC-SHA256 dari JSON({reference, merchant_ref, status}) menggunakan kode_api (private_key)
     // Support both field name formats (private_key baru, privateKey lama)
-    const kodeApi = gatewaySettings.tripay_config.private_key || gatewaySettings.tripay_config.privateKey;
+    const kodeApi = gatewaySettings.socialbooster_config.kode_api;
     const expectedSignature = crypto
       .createHmac('sha256', kodeApi)
       .update(JSON.stringify({

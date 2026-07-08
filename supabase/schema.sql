@@ -174,7 +174,7 @@ CREATE TYPE payment_mode AS ENUM ('Sandbox', 'Production');
 CREATE TABLE payment_gateway (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     mode payment_mode DEFAULT 'Sandbox',
-    tripay_config JSONB,
+    socialbooster_config JSONB,
     cryptomus_config JSONB,
     create_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     update_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

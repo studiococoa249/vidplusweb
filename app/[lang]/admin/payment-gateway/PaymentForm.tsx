@@ -10,7 +10,7 @@ export default function PaymentForm({ initialData }: { initialData: any }) {
   const params = useParams();
   const lang = params.lang as string || "id";
 
-  const tripay = initialData?.tripay_config || {};
+  const sb = initialData?.socialbooster_config || {};
   const cryptomus = initialData?.cryptomus_config || {};
 
   return (
@@ -18,7 +18,7 @@ export default function PaymentForm({ initialData }: { initialData: any }) {
       <form action={formAction} className="space-y-8">
         <input type="hidden" name="id" value={initialData?.id || 'new'} />
         <input type="hidden" name="lang" value={lang} />
-        
+
         {state?.error && (
           <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 flex items-center gap-3">
             <AlertCircle size={20} />
@@ -43,21 +43,21 @@ export default function PaymentForm({ initialData }: { initialData: any }) {
             <label className="text-sm font-semibold text-gray-300">Mode Pembayaran (Environment)</label>
             <div className="flex items-center gap-6">
               <label className="flex items-center gap-2 cursor-pointer group">
-                <input 
-                  type="radio" 
-                  name="mode" 
-                  value="Sandbox" 
-                  defaultChecked={!initialData || initialData.mode === 'Sandbox'} 
+                <input
+                  type="radio"
+                  name="mode"
+                  value="Sandbox"
+                  defaultChecked={!initialData || initialData.mode === 'Sandbox'}
                   className="w-4 h-4 text-[#ffbd59] bg-gray-900 border-gray-700 focus:ring-[#ffbd59]"
                 />
                 <span className="text-gray-300 group-hover:text-white transition-colors">Sandbox (Test)</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer group">
-                <input 
-                  type="radio" 
-                  name="mode" 
-                  value="Production" 
-                  defaultChecked={initialData?.mode === 'Production'} 
+                <input
+                  type="radio"
+                  name="mode"
+                  value="Production"
+                  defaultChecked={initialData?.mode === 'Production'}
                   className="w-4 h-4 text-[#ffbd59] bg-gray-900 border-gray-700 focus:ring-[#ffbd59]"
                 />
                 <span className="text-gray-300 group-hover:text-white transition-colors">Production (Live)</span>
@@ -67,40 +67,34 @@ export default function PaymentForm({ initialData }: { initialData: any }) {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* TriPay Config */}
+          {/* SocialBooster Config */}
           <div className="space-y-6">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <span className="w-8 h-8 rounded-full bg-[#ffbd59]/10 text-[#ffbd59] flex items-center justify-center text-sm">2</span>
-              TriPay
+              SocialBooster (Tripay)
             </h2>
             <div className="bg-[#0a0c13] p-5 rounded-xl border border-gray-800 space-y-4 shadow-inner">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-300">Merchant Code</label>
-                <input 
-                  type="text" 
-                  name="tp_merchant_code"
-                  defaultValue={tripay.merchantCode}
-                  placeholder="Misal: TXXXXX"
-                  className="w-full bg-[#121622] border border-gray-700 rounded-lg py-2.5 px-4 text-white focus:outline-none focus:border-[#ffbd59] focus:ring-1 focus:ring-[#ffbd59]/50 transition-all"
-                />
-              </div>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Konfigurasi API gateway pembayaran via{' '}
+                <span className="text-[#ffbd59] font-mono">socialboosters.web.id</span>
+              </p>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">API Key</label>
-                <input 
-                  type="text" 
-                  name="tp_api_key"
-                  defaultValue={tripay.apiKey}
-                  placeholder="Kunci API"
+                <input
+                  type="text"
+                  name="sb_api_key"
+                  defaultValue={sb.api_key}
+                  placeholder="Masukkan API Key"
                   className="w-full bg-[#121622] border border-gray-700 rounded-lg py-2.5 px-4 text-white font-mono text-sm focus:outline-none focus:border-[#ffbd59] focus:ring-1 focus:ring-[#ffbd59]/50 transition-all"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-300">Private Key</label>
-                <input 
-                  type="password" 
-                  name="tp_private_key"
-                  defaultValue={tripay.privateKey}
-                  placeholder="Kunci Privat"
+                <label className="text-sm font-medium text-gray-300">Kode API (Private Key)</label>
+                <input
+                  type="password"
+                  name="sb_kode_api"
+                  defaultValue={sb.kode_api}
+                  placeholder="Masukkan Kode API"
                   className="w-full bg-[#121622] border border-gray-700 rounded-lg py-2.5 px-4 text-white font-mono text-sm focus:outline-none focus:border-[#ffbd59] focus:ring-1 focus:ring-[#ffbd59]/50 transition-all"
                 />
               </div>
@@ -116,8 +110,8 @@ export default function PaymentForm({ initialData }: { initialData: any }) {
             <div className="bg-[#0a0c13] p-5 rounded-xl border border-gray-800 space-y-4 shadow-inner">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">Merchant ID</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   name="cm_merchant_id"
                   defaultValue={cryptomus.merchantId}
                   placeholder="ID Merchant Cryptomus"
@@ -126,8 +120,8 @@ export default function PaymentForm({ initialData }: { initialData: any }) {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">Payment Key</label>
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   name="cm_payment_key"
                   defaultValue={cryptomus.paymentKey}
                   placeholder="Kunci Pembayaran (API Key)"
@@ -137,8 +131,8 @@ export default function PaymentForm({ initialData }: { initialData: any }) {
               <div className="pt-2 border-t border-gray-800">
                 <label className="flex items-start gap-3 cursor-pointer group mt-2">
                   <div className="relative flex items-center mt-0.5">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       name="cm_charge_fee"
                       value="true"
                       defaultChecked={cryptomus.chargeFeeToCustomer === true}
@@ -156,8 +150,8 @@ export default function PaymentForm({ initialData }: { initialData: any }) {
         </div>
 
         <div className="pt-6 border-t border-gray-800 flex justify-end">
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={isPending}
             className="bg-[#ffbd59] hover:bg-[#e5a94f] text-black px-6 py-3.5 rounded-xl font-bold transition-colors flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-[#ffbd59]/20 hover:shadow-[#ffbd59]/40 w-full sm:w-auto justify-center"
           >

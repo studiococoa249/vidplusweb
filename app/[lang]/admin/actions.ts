@@ -57,9 +57,9 @@ export async function updatePaymentGateway(prevState: any, formData: FormData) {
   const lang = formData.get("lang") as string || "id";
 
   // TriPay
-  const tp_merchant_code = formData.get("tp_merchant_code") as string;
-  const tp_api_key = formData.get("tp_api_key") as string;
-  const tp_private_key = formData.get("tp_private_key") as string;
+  // SocialBooster
+  const sb_api_key = formData.get("sb_api_key") as string;
+  const sb_kode_api = formData.get("sb_kode_api") as string;
   
   // Cryptomus
   const cm_merchant_id = formData.get("cm_merchant_id") as string;
@@ -68,10 +68,9 @@ export async function updatePaymentGateway(prevState: any, formData: FormData) {
 
   const payload = {
     mode,
-    tripay_config: {
-      merchantCode: tp_merchant_code,
-      apiKey: tp_api_key,
-      privateKey: tp_private_key
+    socialbooster_config: {
+      api_key: sb_api_key,
+      kode_api: sb_kode_api,
     },
     cryptomus_config: {
       merchantId: cm_merchant_id,

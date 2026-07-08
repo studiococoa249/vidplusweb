@@ -136,15 +136,14 @@ export async function POST(req: Request) {
 
         // Fetch Tripay config to get payment channels
         const { data: gatewaySettings } = await supabase.from("payment_gateway").select("*").limit(1).single();
-        if (!gatewaySettings || !gatewaySettings.tripay_config) {
+        if (!gatewaySettings || !gatewaySettings.socialbooster_config) {
           await sendMessage(chatId, "Payment gateway is not configured yet.");
           return NextResponse.json({ ok: true });
         }
 
         const tripayConfig = {
-          // Support both field name formats (api_key/private_key baru, apiKey/privateKey lama)
-          api_key: gatewaySettings.tripay_config.api_key || gatewaySettings.tripay_config.apiKey,
-          kode_api: gatewaySettings.tripay_config.private_key || gatewaySettings.tripay_config.privateKey,
+          api_key: gatewaySettings.socialbooster_config.api_key,
+          kode_api: gatewaySettings.socialbooster_config.kode_api,
         };
 
         const channelsRes = await getPaymentChannels(tripayConfig);
@@ -192,15 +191,14 @@ export async function POST(req: Request) {
 
           // Fetch Tripay config
           const { data: gatewaySettings } = await supabase.from("payment_gateway").select("*").limit(1).single();
-          if (!gatewaySettings || !gatewaySettings.tripay_config) {
+          if (!gatewaySettings || !gatewaySettings.socialbooster_config) {
             await sendMessage(chatId, "Payment gateway is not configured yet.");
             return NextResponse.json({ ok: true });
           }
 
           const tripayConfig = {
-            // Support both field name formats (api_key/private_key baru, apiKey/privateKey lama)
-            api_key: gatewaySettings.tripay_config.api_key || gatewaySettings.tripay_config.apiKey,
-            kode_api: gatewaySettings.tripay_config.private_key || gatewaySettings.tripay_config.privateKey,
+            api_key: gatewaySettings.socialbooster_config.api_key,
+            kode_api: gatewaySettings.socialbooster_config.kode_api,
           };
 
           const merchantRef = `INV-${Date.now()}`;
