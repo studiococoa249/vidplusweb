@@ -38,7 +38,8 @@ export async function POST(req: Request) {
 
     // Verify signature sesuai format custom API:
     // HMAC-SHA256 dari JSON({reference, merchant_ref, status}) menggunakan kode_api (private_key)
-    const kodeApi = gatewaySettings.tripay_config.private_key;
+    // Support both field name formats (private_key baru, privateKey lama)
+    const kodeApi = gatewaySettings.tripay_config.private_key || gatewaySettings.tripay_config.privateKey;
     const expectedSignature = crypto
       .createHmac('sha256', kodeApi)
       .update(JSON.stringify({

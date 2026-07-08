@@ -67,7 +67,7 @@ async function sendMessage(chatId: number, text: string, replyMarkup?: any) {
     if (replyMarkup) {
       body.reply_markup = replyMarkup;
     }
-    
+
     await fetch(`${TELEGRAM_API_URL}/sendMessage`, {
       method: "POST",
       headers: {
@@ -107,7 +107,7 @@ export async function POST(req: Request) {
       const callbackQuery = update.callback_query;
       const data = callbackQuery.data;
       const chatId = callbackQuery.message.chat.id;
-      
+
       // Acknowledge the callback query to remove loading state on the button
       await fetch(`${TELEGRAM_API_URL}/answerCallbackQuery`, {
         method: "POST",
@@ -118,7 +118,7 @@ export async function POST(req: Request) {
       // Extract user using their dummy email tied to chat ID
       const email = telegramEmail(chatId);
       const { data: user } = await supabase.from("users").select("id, full_name, email").eq("email", email).single();
-      
+
       if (!user) {
         await sendMessage(chatId, "You need to register first. Type /register");
         return NextResponse.json({ ok: true });
@@ -127,7 +127,7 @@ export async function POST(req: Request) {
       if (data.startsWith("plan_")) {
         // Step 1: User selected a plan. Now select payment method.
         const planId = data.replace("plan_", "");
-        
+
         const { data: plan } = await supabase.from("plan_membership").select("*").eq("id", planId).single();
         if (!plan) {
           await sendMessage(chatId, "Plan not found.");
@@ -142,13 +142,14 @@ export async function POST(req: Request) {
         }
 
         const tripayConfig = {
-          api_key: gatewaySettings.tripay_config.api_key,
-          kode_api: gatewaySettings.tripay_config.private_key,
+          // Support both field name formats (api_key/private_key baru, apiKey/privateKey lama)
+          api_key: gatewaySettings.tripay_config.api_key || gatewaySettings.tripay_config.apiKey,
+          kode_api: gatewaySettings.tripay_config.private_key || gatewaySettings.tripay_config.privateKey,
         };
 
         const channelsRes = await getPaymentChannels(tripayConfig);
         let keyboard: any[] = [];
-        
+
         if (channelsRes.success && channelsRes.data && channelsRes.data.length > 0) {
           // Map channels to inline keyboard buttons (filter only active)
           keyboard = channelsRes.data
@@ -173,7 +174,7 @@ export async function POST(req: Request) {
           `You selected **${plan.name}** (IDR ${plan.price_idr.toLocaleString()} / $${plan.price_usd}).\n\nPlease select a payment method:`,
           { inline_keyboard: keyboard }
         );
-      } 
+      }
       else if (data.startsWith("pay_")) {
         // Step 2: User selected payment method.
         // Data format: pay_UUID_METHOD
@@ -197,8 +198,9 @@ export async function POST(req: Request) {
           }
 
           const tripayConfig = {
-            api_key: gatewaySettings.tripay_config.api_key,
-            kode_api: gatewaySettings.tripay_config.private_key,
+            // Support both field name formats (api_key/private_key baru, apiKey/privateKey lama)
+            api_key: gatewaySettings.tripay_config.api_key || gatewaySettings.tripay_config.apiKey,
+            kode_api: gatewaySettings.tripay_config.private_key || gatewaySettings.tripay_config.privateKey,
           };
 
           const merchantRef = `INV-${Date.now()}`;
@@ -231,9 +233,9 @@ export async function POST(req: Request) {
                   invoice: res.result.order_id,
                   detail_payment: res.result
                 }]);
-                
+
                 if (insertError) {
-                   console.error("Failed to insert membership_history:", insertError);
+                  console.error("Failed to insert membership_history:", insertError);
                 }
 
                 await sendMessage(
@@ -269,9 +271,9 @@ export async function POST(req: Request) {
                 invoice: tripayRes.data.reference,
                 detail_payment: tripayRes.data
               }]);
-              
+
               if (insertError) {
-                 console.error("Failed to insert membership_history:", insertError);
+                console.error("Failed to insert membership_history:", insertError);
               }
 
               // Send QR code photo if available
@@ -317,10 +319,10 @@ export async function POST(req: Request) {
       if (text.startsWith("/register")) {
         const fullName = update.message.from?.first_name || "Telegram User";
         const email = telegramEmail(chatId);
-        
+
         const randomPassword = crypto.randomBytes(8).toString('hex');
         const hashedPassword = await bcrypt.hash(randomPassword, 10);
-        
+
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
         let userToken = '';
         const randomValues = crypto.randomBytes(16);
@@ -368,10 +370,10 @@ export async function POST(req: Request) {
           chatId,
           "Tap tombol di bawah untuk membuka **Vidplus VIP** dengan akun Anda."
         );
-      } 
+      }
       else if (text.startsWith("/plan") || text.startsWith("/buy")) {
         const { data: plans } = await supabase.from("plan_membership").select("*").order("price_idr", { ascending: true });
-        
+
         if (!plans || plans.length === 0) {
           await sendMessage(chatId, "No plans available right now.");
           return NextResponse.json({ ok: true });
