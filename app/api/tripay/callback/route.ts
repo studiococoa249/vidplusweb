@@ -23,10 +23,6 @@ export async function POST(req: Request) {
     const rawBody = await req.text();
 
     // Log all incoming headers for debugging
-    const incomingSignature = req.headers.get('x-callback-signature')
-      || req.headers.get('signature')
-      || req.headers.get('x-signature');
-
     console.log('[Webhook] Headers:', Object.fromEntries(req.headers.entries()));
     console.log('[Webhook] Raw body preview:', rawBody.substring(0, 300));
 
@@ -75,6 +71,12 @@ export async function POST(req: Request) {
         status: payload.status,
       }))
       .digest('hex');
+
+    // Custom API sends signature in payload, but fallback to headers just in case
+    const incomingSignature = payload.signature 
+      || req.headers.get('x-callback-signature')
+      || req.headers.get('signature')
+      || req.headers.get('x-signature');
 
     console.log('[Webhook] Expected signature:', expectedSignature);
     console.log('[Webhook] Incoming signature:', incomingSignature);
