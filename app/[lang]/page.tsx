@@ -6,7 +6,7 @@ import {
   Smartphone, MonitorPlay, Send,
 } from "lucide-react";
 import SearchOverlay from "../components/SearchOverlay";
-import { supabase } from "@/utils/supabase";
+import { getAllDramas } from "@/utils/streamData";
 import Link from "next/link";
 import { cookies } from "next/headers";
 
@@ -43,13 +43,17 @@ export default async function DramaShortApp({ params }: { params: Promise<{ lang
     } catch {}
   }
 
-  const { data: dramas } = await supabase
-    .from("short_drama")
-    .select("*")
-    .order("create_at", { ascending: false })
-    .limit(20);
+  const rawDramas = await getAllDramas();
+  const safeDramas = rawDramas.map((drama) => ({
+    id: String(drama.id),
+    name: drama.name,
+    slug: drama.slug,
+    banner_url: drama.banner_url,
+    desc: drama.description || "",
+    total_episode: drama.total_episode || drama.episodes?.length || 0,
+    view_count: 0,
+  }));
 
-  const safeDramas = dramas || [];
   const trendingData = safeDramas.slice(0, 5);
   const loveData = safeDramas.slice(5, 11);
   const actionData = safeDramas.slice(11, 20);

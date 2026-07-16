@@ -1,7 +1,9 @@
-import { supabase } from "@/utils/supabase";
+import { getDramaById } from "@/utils/streamData";
 import PlayContainer from "./PlayContainer";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { supabase } from "@/utils/supabase";
 
 export default async function PlayDramaPage({
   params,
@@ -10,20 +12,58 @@ export default async function PlayDramaPage({
 }) {
   const { lang, slug } = await params;
 
-  const { data: drama } = await supabase
-    .from("short_drama")
-    .select("*")
-    .eq("id", slug)
-    .single();
+  const drama = await getDramaById(slug);
 
-  const { data: episodesData } = await supabase
-    .from("play_short_drama")
-    .select("*")
-    .eq("id_short_drama", slug)
-    .order("episode", { ascending: true });
+  // Fetch current user and VIP status
+  const cookieStore = await cookies();
+  const sessionStr = cookieStore.get("auth_session")?.value;
+  let userSession = null;
+  let isVip = false;
 
-  const episodes = episodesData || [];
+  if (sessionStr) {
+    try {
+      userSession = JSON.parse(sessionStr);
+      if (userSession?.id) {
+        const { data: dbUser } = await supabase
+          .from("users")
+          .select("membership, end_membership")
+          .eq("id", userSession.id)
+          .single();
+
+        if (dbUser && dbUser.membership === "VIP") {
+          if (dbUser.end_membership) {
+            const expiry = new Date(dbUser.end_membership);
+            if (expiry > new Date()) {
+              isVip = true;
+            }
+          } else {
+            isVip = true;
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Error checking VIP status:", e);
+    }
+  }
+
+  const episodes = (drama?.episodes || []).map((ep, idx) => {
+    const match = ep.name.match(/\d+/);
+    const epNum = match ? parseInt(match[0], 10) : idx + 1;
+    return {
+      id: String(ep.id),
+      url: ep.url,
+      episode: epNum,
+      duration: 0,
+      type: ep.type || "Free",
+    };
+  });
+
   const title = drama?.name || "Short Drama";
+
+  const user = {
+    isLoggedIn: !!userSession,
+    isVip,
+  };
 
   return (
     <div className="fixed inset-0 bg-black z-[100] flex flex-col">
@@ -43,9 +83,10 @@ export default async function PlayDramaPage({
       {/* Player */}
       <div className="flex-1 w-full h-full flex items-center justify-center">
         <div className="w-full max-w-md h-full md:h-[90vh] md:rounded-2xl overflow-hidden bg-black relative">
-          <PlayContainer episodes={episodes} dramaName={title} />
+          <PlayContainer episodes={episodes} dramaName={title} user={user} lang={lang} />
         </div>
       </div>
     </div>
   );
 }
+

@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Search, X, Play, Layers } from "lucide-react";
 import Link from "next/link";
-import { supabase } from "@/utils/supabase";
 
 interface SearchResult {
   id: string;
@@ -37,14 +36,18 @@ export default function SearchOverlay({
       }
 
       setLoading(true);
-      const { data } = await supabase
-        .from("short_drama")
-        .select("id, name, slug, banner_url, total_episode, view_count")
-        .ilike("name", `%${q.trim()}%`)
-        .order("view_count", { ascending: false })
-        .limit(20);
-
-      setResults(data || []);
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          setResults(data || []);
+        } else {
+          setResults([]);
+        }
+      } catch (err) {
+        console.error(err);
+        setResults([]);
+      }
       setLoading(false);
     },
     []

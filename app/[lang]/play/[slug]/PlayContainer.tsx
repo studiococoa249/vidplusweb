@@ -3,22 +3,29 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import VideoPlayer from "@/components/VideoPlayer";
 import { ListVideo, X, Play, SkipForward, ChevronRight, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
+import Link from "next/link";
 
 interface Episode {
   id: string;
   url: string;
   episode: number;
   duration: number;
+  type?: string;
 }
 
 interface Props {
   episodes: Episode[];
   dramaName: string;
+  user: {
+    isLoggedIn: boolean;
+    isVip: boolean;
+  };
+  lang: string;
 }
 
 type PlayerState = "loading" | "ready" | "error";
 
-export default function PlayContainer({ episodes, dramaName }: Props) {
+export default function PlayContainer({ episodes, dramaName, user, lang }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showEpisodeList, setShowEpisodeList] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -128,21 +135,74 @@ export default function PlayContainer({ episodes, dramaName }: Props) {
     );
   }
 
+  const isEpisodeLocked = currentEpisode.type === "VIP" && !user.isVip;
+
   return (
     <div ref={videoContainerRef} className="w-full h-full relative bg-black select-none">
-      <VideoPlayer
-        key={`${currentEpisode.id}-${playerKey}`}
-        src={currentEpisode.url}
-        autoplay
-        onEnded={onEnded}
-        onTap={handleTap}
-        onLoadStart={onLoadStart}
-        onReady={onReady}
-        onError={onError}
-      />
+      {isEpisodeLocked ? (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-gradient-to-b from-[#121622] via-[#07090e] to-black px-6 text-center">
+          {/* Decorative light effect */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,189,89,0.08),transparent_70%)] pointer-events-none" />
+          
+          <div className="w-20 h-20 bg-gradient-to-br from-[#ffbd59] to-[#e5a94f] rounded-full flex items-center justify-center text-black shadow-[0_0_40px_rgba(255,189,89,0.25)] mb-6 animate-pulse">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-10 h-10">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+            </svg>
+          </div>
+
+          <span className="bg-[#ffbd59]/10 text-[#ffbd59] border border-[#ffbd59]/20 text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3">
+            VIP Episode {currentEpisode.episode}
+          </span>
+          
+          <h2 className="text-white text-xl font-bold mb-3 tracking-wide drop-shadow-md">
+            Konten Khusus VIP Member
+          </h2>
+          
+          <p className="text-gray-400 text-sm max-w-xs mb-8 leading-relaxed">
+            {!user.isLoggedIn 
+              ? "Silakan masuk ke akun Anda terlebih dahulu untuk menikmati akses episode VIP ini."
+              : "Aktifkan paket membership VIP untuk membuka kunci dan menikmati semua episode premium."}
+          </p>
+
+          {!user.isLoggedIn ? (
+            <Link
+              href={`/${lang}/auth/login`}
+              className="flex items-center justify-center gap-2 w-full max-w-[240px] bg-gradient-to-r from-[#ffbd59] to-[#e5a94f] text-black font-bold py-3.5 px-6 rounded-2xl text-sm active:scale-95 transition-all shadow-[0_4px_20px_rgba(255,189,89,0.3)]"
+            >
+              Masuk / Login
+            </Link>
+          ) : (
+            <Link
+              href={`/${lang}/plan`}
+              className="flex items-center justify-center gap-2 w-full max-w-[240px] bg-gradient-to-r from-[#ffbd59] to-[#e5a94f] text-black font-bold py-3.5 px-6 rounded-2xl text-sm active:scale-95 transition-all shadow-[0_4px_20px_rgba(255,189,89,0.3)]"
+            >
+              👑 Langganan VIP
+            </Link>
+          )}
+
+          <button
+            onClick={() => setShowEpisodeList(true)}
+            className="mt-6 text-gray-400 hover:text-white text-xs font-medium transition-colors flex items-center gap-1.5"
+          >
+            Lihat Episode Lainnya
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      ) : (
+        <VideoPlayer
+          key={`${currentEpisode.id}-${playerKey}`}
+          src={currentEpisode.url}
+          autoplay
+          onEnded={onEnded}
+          onTap={handleTap}
+          onLoadStart={onLoadStart}
+          onReady={onReady}
+          onError={onError}
+        />
+      )}
 
       {/* Loading spinner overlay */}
-      {playerState === "loading" && (
+      {playerState === "loading" && !isEpisodeLocked && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none bg-black/40">
           <Loader2 size={40} className="text-[#ffbd59] animate-spin" />
           <p className="text-white/60 text-xs mt-3">Memuat video...</p>
@@ -150,7 +210,7 @@ export default function PlayContainer({ episodes, dramaName }: Props) {
       )}
 
       {/* Error overlay with retry */}
-      {playerState === "error" && (
+      {playerState === "error" && !isEpisodeLocked && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-black/70 backdrop-blur-sm gap-3">
           <AlertTriangle size={36} className="text-red-400" />
           <p className="text-white/70 text-sm text-center px-8 max-w-xs">{errorMsg || "Gagal memuat video"}</p>
@@ -189,7 +249,7 @@ export default function PlayContainer({ episodes, dramaName }: Props) {
       </div>
 
       {/* Center pause/play icon */}
-      {isPaused && showControls && playerState === "ready" && (
+      {isPaused && showControls && playerState === "ready" && !isEpisodeLocked && (
         <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
           <div className="w-16 h-16 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center animate-fade-in">
             <Play size={28} className="text-white ml-1" fill="white" />
@@ -199,7 +259,7 @@ export default function PlayContainer({ episodes, dramaName }: Props) {
 
       {/* Side buttons */}
       <div
-        className={`absolute right-3 bottom-16 z-20 flex flex-col items-center gap-4 transition-opacity duration-300 ${showControls && !showNextOverlay && playerState === "ready" ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        className={`absolute right-3 bottom-16 z-20 flex flex-col items-center gap-4 transition-opacity duration-300 ${showControls && !showNextOverlay && (playerState === "ready" || isEpisodeLocked) ? "opacity-100" : "opacity-0 pointer-events-none"}`}
       >
         {hasNext && (
           <button
@@ -219,7 +279,7 @@ export default function PlayContainer({ episodes, dramaName }: Props) {
       </div>
 
       {/* Auto next episode overlay */}
-      {showNextOverlay && hasNext && (
+      {showNextOverlay && hasNext && !isEpisodeLocked && (
         <div className="absolute inset-0 bg-black/70 backdrop-blur-sm z-30 flex flex-col items-center justify-center gap-4 animate-fade-in">
           <p className="text-white/60 text-sm">Episode selanjutnya</p>
           <button
@@ -270,17 +330,27 @@ export default function PlayContainer({ episodes, dramaName }: Props) {
               <div className="grid grid-cols-5 gap-2">
                 {episodes.map((ep, index) => {
                   const isActive = index === currentIndex;
+                  const isVipEpisode = ep.type === "VIP";
                   return (
                     <button
                       key={ep.id}
                       onClick={() => goToEpisode(index)}
-                      className={`aspect-square rounded-xl flex items-center justify-center text-sm font-semibold transition-all active:scale-90 ${
+                      className={`aspect-square rounded-xl flex flex-col items-center justify-center text-sm font-semibold transition-all active:scale-90 relative ${
                         isActive
                           ? "bg-[#ffbd59] text-black shadow-[0_0_12px_rgba(255,189,89,0.4)]"
                           : "bg-[#0a0c13] border border-gray-700/50 text-gray-400 active:border-[#ffbd59]/50"
                       }`}
                     >
-                      {ep.episode}
+                      <span>{ep.episode}</span>
+                      {isVipEpisode && (
+                        <span className={`absolute -top-1 -right-1 text-[9px] px-1 rounded-md font-bold ${
+                          isActive 
+                            ? "bg-black text-[#ffbd59]" 
+                            : "bg-[#ffbd59] text-black shadow-[0_2px_4px_rgba(255,189,89,0.3)]"
+                        }`}>
+                          VIP
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -292,3 +362,4 @@ export default function PlayContainer({ episodes, dramaName }: Props) {
     </div>
   );
 }
+

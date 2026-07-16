@@ -1,6 +1,10 @@
 "use client";
 
-import React, { useEffect, useRef, useCallback, useState } from "react";
+import React, { useEffect, useRef } from "react";
+import videojs from "video.js";
+import Player from "video.js/dist/types/player";
+import Hls from "hls.js";
+import "video.js/dist/video-js.css";
 
 interface VideoPlayerProps {
   src: string;
@@ -21,102 +25,158 @@ export default function VideoPlayer({
   onReady,
   onError,
 }: VideoPlayerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<Player | null>(null);
+  const hlsRef = useRef<Hls | null>(null);
+
   const onEndedRef = useRef(onEnded);
-  const onErrorRef = useRef(onError);
-  const onReadyRef = useRef(onReady);
   const onLoadStartRef = useRef(onLoadStart);
-  const [retryCount, setRetryCount] = useState(0);
+  const onReadyRef = useRef(onReady);
+  const onErrorRef = useRef(onError);
+  const onTapRef = useRef(onTap);
 
   onEndedRef.current = onEnded;
-  onErrorRef.current = onError;
-  onReadyRef.current = onReady;
   onLoadStartRef.current = onLoadStart;
-
-  const handleTap = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (onTap) {
-      onTap();
-      return;
-    }
-
-    if (video.paused) {
-      video.play().catch(() => {});
-    } else {
-      video.pause();
-    }
-  }, [onTap]);
+  onReadyRef.current = onReady;
+  onErrorRef.current = onError;
+  onTapRef.current = onTap;
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !src) return;
+    if (!containerRef.current) return;
 
     onLoadStartRef.current?.();
-    video.src = src;
-    video.load();
 
-    const onCanPlay = () => {
-      onReadyRef.current?.();
-      if (!autoplay) return;
-      video.play().catch(() => {});
-    };
+    // Create video element dynamically to prevent React rendering conflicts
+    const videoElement = document.createElement("video");
+    videoElement.className = "video-js vjs-fill vjs-big-play-centered object-cover w-full h-full";
+    videoElement.style.objectFit = "cover";
+    videoElement.setAttribute("playsinline", "true");
+    videoElement.setAttribute("webkit-playsinline", "true");
+    // Mute the video to guarantee that autoplay works on all browsers/devices
+    videoElement.muted = true;
+    videoElement.setAttribute("muted", "true");
+    containerRef.current.appendChild(videoElement);
 
-    const onEnd = () => onEndedRef.current?.();
+    const isHls = src.includes(".m3u8");
+    let player: Player | null = null;
+    let hls: Hls | null = null;
 
-    const onVideoError = () => {
-      const code = video.error?.code;
-      const msg = video.error?.message || "Video gagal dimuat";
-      if (code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
-        onErrorRef.current?.("Format video tidak didukung atau URL tidak valid");
-      } else if (code === MediaError.MEDIA_ERR_NETWORK) {
-        onErrorRef.current?.("Gagal memuat video — masalah jaringan");
-      } else {
-        onErrorRef.current?.(msg);
+    if (isHls) {
+      const proxiedSrc = `/api/hls-proxy?url=${encodeURIComponent(src)}`;
+
+      if (Hls.isSupported()) {
+        hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+        });
+        hlsRef.current = hls;
+
+        hls.loadSource(proxiedSrc);
+        hls.attachMedia(videoElement);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          onReadyRef.current?.();
+          if (autoplay) {
+            videoElement.play().catch(() => {});
+          }
+        });
+
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          if (data.fatal) {
+            onErrorRef.current?.(`HLS Error: ${data.details}`);
+          }
+        });
+      } else if (videoElement.canPlayType("application/x-mpegURL")) {
+        videoElement.src = proxiedSrc;
+        videoElement.load();
+        
+        const onCanPlay = () => {
+          onReadyRef.current?.();
+          if (autoplay) {
+            videoElement.play().catch(() => {});
+          }
+        };
+
+        const onVideoErr = () => {
+          onErrorRef.current?.("Gagal memuat video");
+        };
+
+        videoElement.addEventListener("canplay", onCanPlay);
+        videoElement.addEventListener("error", onVideoErr);
       }
-    };
+    } else {
+      player = videojs(videoElement, {
+        autoplay: autoplay,
+        muted: true, // Muted for autoplay
+        controls: false,
+        responsive: true,
+        fill: true,
+        sources: [
+          {
+            src: src,
+            type: "video/mp4",
+          },
+        ],
+      });
+      playerRef.current = player;
 
-    const onStalled = () => {
-      setTimeout(() => {
-        if (video.readyState < 3 && !video.paused) {
-          onErrorRef.current?.("Video buffering terlalu lama");
+      player.on("loadstart", () => {
+        onLoadStartRef.current?.();
+      });
+
+      player.on("canplay", () => {
+        onReadyRef.current?.();
+        if (autoplay && playerRef.current) {
+          const playPromise = playerRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(() => {});
+          }
         }
-      }, 15000);
-    };
+      });
 
-    video.addEventListener("canplay", onCanPlay);
-    video.addEventListener("ended", onEnd);
-    video.addEventListener("error", onVideoError);
-    video.addEventListener("stalled", onStalled);
+      player.on("ended", () => {
+        onEndedRef.current?.();
+      });
+
+      player.on("error", () => {
+        const error = playerRef.current?.error();
+        onErrorRef.current?.(error ? error.message : "Gagal memuat video");
+      });
+    }
+
+    const onEndedNative = () => {
+      onEndedRef.current?.();
+    };
+    videoElement.addEventListener("ended", onEndedNative);
+
+    const handleTapClick = () => {
+      onTapRef.current?.();
+    };
+    videoElement.addEventListener("click", handleTapClick);
 
     return () => {
-      video.removeEventListener("canplay", onCanPlay);
-      video.removeEventListener("ended", onEnd);
-      video.removeEventListener("error", onVideoError);
-      video.removeEventListener("stalled", onStalled);
-      video.pause();
-      video.removeAttribute("src");
-      video.load();
+      videoElement.removeEventListener("ended", onEndedNative);
+      videoElement.removeEventListener("click", handleTapClick);
+
+      if (playerRef.current) {
+        playerRef.current.dispose();
+        playerRef.current = null;
+      }
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+      
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
+      }
     };
-  }, [src, autoplay, retryCount]);
+  }, [src, autoplay]);
 
   return (
-    <video
-      ref={videoRef}
-      className="w-full h-full object-contain bg-black"
-      playsInline
-      webkit-playsinline=""
-      preload="metadata"
-      onClick={handleTap}
+    <div 
+      ref={containerRef} 
+      className="w-full h-full relative overflow-hidden bg-black flex items-center justify-center" 
     />
   );
-}
-
-export function retriggerLoad(videoEl: HTMLVideoElement | null) {
-  if (!videoEl) return;
-  const currentSrc = videoEl.src;
-  if (!currentSrc) return;
-  videoEl.src = currentSrc;
-  videoEl.load();
 }
